@@ -156,7 +156,7 @@ module TTFunk
 
           when :range_format
             # +2 for sentinel GID, +2 for num_ranges
-            num_ranges = read(2, 'n').first
+            num_ranges = io.read(2).unpack1('n')
             @length += (num_ranges * RANGE_ENTRY_SIZE) + 4
 
             ranges = Array.new(num_ranges) { read(RANGE_ENTRY_SIZE, 'nC') }
@@ -170,7 +170,7 @@ module TTFunk
 
             # read the sentinel GID, otherwise known as the number of glyphs
             # in the font
-            @n_glyphs = read(2, 'n').first
+            @n_glyphs = io.read(2).unpack1('n')
 
             last_start_gid, last_fd_index = ranges.last
             @entries << [(last_start_gid...(n_glyphs + 1)), last_fd_index]

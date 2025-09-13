@@ -84,7 +84,7 @@ module TTFunk
         private
 
         def parse_cmap!
-          fractional_version, @language, groupcount = read(14, 'nx4NN')
+          fractional_version, @language, groupcount = io.read(14).unpack('nx4NN')
           if fractional_version != 0
             raise NotImplementedError,
               "cmap version 12.#{fractional_version} is not supported"

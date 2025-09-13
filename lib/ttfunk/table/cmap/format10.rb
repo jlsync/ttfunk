@@ -72,14 +72,14 @@ module TTFunk
 
         def parse_cmap!
           fractional_version, @language, firstcode, entrycount =
-            read(18, 'nx4NNN')
+            io.read(18).unpack('nx4NNN')
           if fractional_version != 0
             raise NotImplementedError,
               "cmap version 10.#{fractional_version} is not supported"
           end
           @code_map = {}
           (firstcode...(firstcode + entrycount)).each do |code|
-            @code_map[code] = read(2, 'n').first & 0xFFFF
+            @code_map[code] = io.read(2).unpack1('n') & 0xFFFF
           end
         end
       end

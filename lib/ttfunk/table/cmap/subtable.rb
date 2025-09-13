@@ -85,11 +85,11 @@ module TTFunk
         # @param table_start [Integer]
         def initialize(file, table_start)
           @file = file
-          @platform_id, @encoding_id, @offset = read(8, 'nnN')
+          @platform_id, @encoding_id, @offset = io.read(8).unpack('nnN')
           @offset += table_start
 
           parse_from(@offset) do
-            @format = read(2, 'n').first
+            @format = io.read(2).unpack1('n')
 
             case @format
             when 0 then extend(TTFunk::Table::Cmap::Format00)

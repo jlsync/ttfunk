@@ -216,7 +216,7 @@ module TTFunk
           # so we have to supply a default here to prevent nils
           @max_component_depth =
             if length == MAX_V1_TABLE_LENGTH
-              read(2, 'n').first
+              io.read(2).unpack1('n')
             else
               DEFAULT_MAX_COMPONENT_DEPTH
             end

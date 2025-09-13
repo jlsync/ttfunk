@@ -70,10 +70,10 @@ module TTFunk
         private
 
         def parse_cmap!
-          @language, firstcode, entrycount = read(8, 'x2nnn')
+          @language, firstcode, entrycount = io.read(8).unpack('x2nnn')
           @code_map = {}
           (firstcode...(firstcode + entrycount)).each do |code|
-            @code_map[code] = read(2, 'n').first & 0xFFFF
+            @code_map[code] = io.read(2).unpack1('n') & 0xFFFF
           end
         end
       end

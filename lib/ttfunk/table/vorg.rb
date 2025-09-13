@@ -70,10 +70,10 @@ module TTFunk
       def parse!
         @major_version, @minor_version = read(4, 'n*')
         @default_vert_origin_y = read_signed(1).first
-        @count = read(2, 'n').first
+        @count = io.read(2).unpack1('n')
 
         count.times do
-          glyph_id = read(2, 'n').first
+          glyph_id = io.read(2).unpack1('n')
           origins[glyph_id] = read_signed(1).first
         end
       end

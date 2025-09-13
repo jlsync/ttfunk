@@ -119,7 +119,7 @@ module TTFunk
         def parse!
           @entry_cache = {}
 
-          num_entries = read(2, 'n').first
+          num_entries = io.read(2).unpack1('n')
 
           if num_entries.zero?
             @length = 2

@@ -32,7 +32,7 @@ module TTFunk
         private
 
         def parse_format!
-          number_of_glyphs = read(2, 'n').first
+          number_of_glyphs = io.read(2).unpack1('n')
           @glyph_name_index = read(number_of_glyphs * 2, 'n*')
           @names = []
 

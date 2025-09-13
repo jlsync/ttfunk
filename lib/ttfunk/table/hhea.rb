@@ -129,16 +129,16 @@ module TTFunk
       private
 
       def parse!
-        @version = read(4, 'N').first
+        @version = io.read(4).unpack1('N')
         @ascent, @descent, @line_gap = read_signed(3)
-        @advance_width_max = read(2, 'n').first
+        @advance_width_max = io.read(2).unpack1('n')
 
         @min_left_side_bearing, @min_right_side_bearing, @x_max_extent,
           @caret_slope_rise, @caret_slope_run, @caret_offset,
           _reserved, _reserved, _reserved, _reserved,
           @metric_data_format = read_signed(11)
 
-        @number_of_metrics = read(2, 'n').first
+        @number_of_metrics = io.read(2).unpack1('n')
       end
     end
   end
