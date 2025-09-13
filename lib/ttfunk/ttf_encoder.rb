@@ -38,8 +38,10 @@ module TTFunk
     # @return [String]
     def encode
       # https://www.microsoft.com/typography/otspec/otff.htm#offsetTable
-      search_range = (2**Math.log2(tables.length).floor) * 16
-      entry_selector = Integer(Math.log2(2**Math.log2(tables.length).floor))
+      # Compute search parameters using bit math (avoids float logs).
+      k = [tables.length, 1].max.bit_length - 1
+      search_range = (1 << k) * 16
+      entry_selector = k
       range_shift = (tables.length * 16) - search_range
       range_shift = 0 if range_shift.negative?
 

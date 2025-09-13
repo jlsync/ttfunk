@@ -97,21 +97,23 @@ module TTFunk
         table = raw[0, 32]
         table[0, 4] = [0x00020000].pack('N')
 
-        index = []
         strings = []
+
+        # Write count and indices directly without building an intermediate array
+        count = mapping.length
+        table << [count].pack('n')
 
         mapping.keys.sort.each do |new_id|
           post_glyph = glyph_for(mapping[new_id])
           position = Format10::POSTSCRIPT_GLYPHS.index(post_glyph)
           if position
-            index << position
+            table << [position].pack('n')
           else
-            index << (257 + strings.length)
+            table << [(257 + strings.length)].pack('n')
             strings << post_glyph
           end
         end
 
-        table << [mapping.length, *index].pack('n*')
         strings.each do |string|
           table << [string.length, string].pack('CA*')
         end

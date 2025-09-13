@@ -163,7 +163,9 @@ module TTFunk
 
           range_bytes =
             if range_max.positive?
-              (Math.log2(range_max) / 8).floor + 1
+              # CFF charset range can be stored in 8- or 16-bit form.
+              # Use 1 byte if max run length fits in 0xFF, else 2 bytes.
+              range_max <= 0xFF ? 1 : 2
             else
               # for cases when there are no sequences at all
               Float::INFINITY

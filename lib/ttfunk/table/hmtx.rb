@@ -27,15 +27,16 @@ module TTFunk
       #   * `:number_of_metrics` - number of mertrics is the table.
       #   * `:table` - encoded table.
       def self.encode(hmtx, mapping)
-        metrics =
-          mapping.keys.sort.map { |new_id|
-            metric = hmtx.for(mapping[new_id])
-            [metric.advance_width, metric.left_side_bearing]
-          }
+        sorted_ids = mapping.keys.sort
+        buf = +''
+        sorted_ids.each do |new_id|
+          metric = hmtx.for(mapping[new_id])
+          buf << [metric.advance_width, metric.left_side_bearing].pack('n*')
+        end
 
         {
-          number_of_metrics: metrics.length,
-          table: metrics.flatten.pack('n*'),
+          number_of_metrics: sorted_ids.length,
+          table: buf,
         }
       end
 

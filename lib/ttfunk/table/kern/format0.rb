@@ -69,11 +69,13 @@ module TTFunk
           return if subset.empty?
 
           num_pairs = subset.length
-          search_range = 2 * (2**Integer(Math.log(num_pairs) / Math.log(2)))
-          entry_selector = Integer(Math.log(search_range / 2) / Math.log(2))
+          # Compute search parameters using bit math (avoids float logs).
+          k = [num_pairs, 1].max.bit_length - 1
+          search_range = 2 * (1 << k)
+          entry_selector = k
           range_shift = (2 * num_pairs) - search_range
 
-          [
+          header = [
             attributes[:version],
             (num_pairs * 6) + 14,
             attributes[:coverage],
@@ -81,8 +83,14 @@ module TTFunk
             search_range,
             entry_selector,
             range_shift,
-            subset,
-          ].flatten.pack('n*')
+          ].pack('n*')
+
+          body = +''
+          subset.each do |l, r, v|
+            body << [l, r, v].pack('n*')
+          end
+
+          header << body
         end
       end
     end
