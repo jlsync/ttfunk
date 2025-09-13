@@ -103,9 +103,9 @@ module TTFunk
         count = mapping.length
         table << [count].pack('n')
 
-        mapping.keys.sort.each do |new_id|
-          post_glyph = glyph_for(mapping[new_id])
-          position = Format10::POSTSCRIPT_GLYPHS.index(post_glyph)
+        mapping.sort.each do |new_id, old_id|
+          post_glyph = glyph_for(old_id)
+          position = Format10::POSTSCRIPT_GLYPHS_INDEX[post_glyph]
           if position
             table << [position].pack('n')
           else

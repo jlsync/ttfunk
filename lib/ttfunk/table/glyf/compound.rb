@@ -144,12 +144,11 @@ module TTFunk
         # @return [String]
         def recode(mapping)
           result = raw.dup
-          new_ids = glyph_ids.map { |id| mapping[id] }
-
-          new_ids.zip(@glyph_id_offsets).each do |new_id, offset|
+          glyph_ids.each_with_index do |old_id, i|
+            new_id = mapping[old_id]
+            offset = @glyph_id_offsets[i]
             result[offset, 2] = [new_id].pack('n')
           end
-
           result
         end
       end

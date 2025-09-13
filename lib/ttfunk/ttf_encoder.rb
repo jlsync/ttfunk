@@ -57,10 +57,10 @@ module TTFunk
 
       # Tables are supposed to be listed in ascending order whereas there is a
       # known optimal order for table data.
-      tables.keys.sort.each do |tag|
-        newfont << [tag, checksum(tables[tag])].pack('A4N')
+      tables.sort.each do |tag, data|
+        newfont << [tag, checksum(data)].pack('A4N')
         newfont << Placeholder.new(tag, length: 4)
-        newfont << [tables[tag].length].pack('N')
+        newfont << [data.length].pack('N')
       end
 
       optimal_table_order.each do |optimal_tag|

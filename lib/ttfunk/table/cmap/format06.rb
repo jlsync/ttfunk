@@ -37,12 +37,13 @@ module TTFunk
           entry_count = 1 + high_char - low_char
           glyph_indexes = Array.new(entry_count, 0)
 
-          new_map =
-            charmap.keys.sort.each_with_object({}) do |code, map|
-              glyph_map[charmap[code]] ||= next_id += 1
-              map[code] = { old: charmap[code], new: glyph_map[charmap[code]] }
-              glyph_indexes[code - low_char] = glyph_map[charmap[code]]
-            end
+          new_map = {}
+          charmap.sort.each do |code, old_gid|
+            glyph_map[old_gid] ||= next_id += 1
+            new_id = glyph_map[old_gid]
+            new_map[code] = { old: old_gid, new: new_id }
+            glyph_indexes[code - low_char] = new_id
+          end
 
           subtable = [
             6, 10 + (entry_count * 2), 0, low_char, entry_count, *glyph_indexes,

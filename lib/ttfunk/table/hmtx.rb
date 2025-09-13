@@ -80,8 +80,13 @@ module TTFunk
           file.horizontal_header.number_of_metrics
         @left_side_bearings = read_signed(lsb_count)
 
-        @widths = @metrics.map(&:advance_width)
-        @widths += [@widths.last] * @left_side_bearings.length
+        total = @metrics.length + @left_side_bearings.length
+        @widths = Array.new(total)
+        # copy metric widths
+        @metrics.length.times { |i| @widths[i] = @metrics[i].advance_width }
+        # fill remaining with last width
+        last = @metrics.last.advance_width
+        (@metrics.length...total).each { |i| @widths[i] = last }
       end
     end
   end

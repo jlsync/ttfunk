@@ -39,6 +39,9 @@ module TTFunk
           scedilla Cacute cacute Ccaron ccaron dcroat
         ].freeze
 
+        # Reverse lookup for fast name -> index mapping
+        POSTSCRIPT_GLYPHS_INDEX = POSTSCRIPT_GLYPHS.each_with_index.to_h.freeze
+
         # Get glyph name for character code.
         #
         # @param code [Integer]

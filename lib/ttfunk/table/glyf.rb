@@ -19,8 +19,8 @@ module TTFunk
       def self.encode(glyphs, new_to_old, old_to_new)
         result = { table: +'', offsets: [] }
 
-        new_to_old.keys.sort.each do |new_id|
-          glyph = glyphs[new_to_old[new_id]]
+        new_to_old.sort.each do |new_id, old_id|
+          glyph = glyphs[old_id]
           result[:offsets] << result[:table].length
           result[:table] << glyph.recode(old_to_new) if glyph
         end
