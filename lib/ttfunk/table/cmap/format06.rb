@@ -72,8 +72,9 @@ module TTFunk
         def parse_cmap!
           @language, firstcode, entrycount = io.read(8).unpack('x2nnn')
           @code_map = {}
-          (firstcode...(firstcode + entrycount)).each do |code|
-            @code_map[code] = io.read(2).unpack1('n') & 0xFFFF
+          glyph_ids = read(entrycount * 2, 'n*')
+          entrycount.times do |i|
+            @code_map[firstcode + i] = glyph_ids[i]
           end
         end
       end

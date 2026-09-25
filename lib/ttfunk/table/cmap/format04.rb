@@ -142,17 +142,22 @@ module TTFunk
           @code_map = {}
 
           end_code.each_with_index do |tail, i|
-            start_code[i].upto(tail) do |code|
-              if id_range_offset[i].zero?
-                glyph_id = code + id_delta[i]
-              else
-                index = (id_range_offset[i] / 2) + (code - start_code[i]) - (segcount - i)
-                # Because some TTF fonts are broken
-                glyph_id = glyph_ids[index] || 0
-                glyph_id += id_delta[i] if glyph_id != 0
-              end
+            start = start_code[i]
+            delta = id_delta[i]
+            range_offset = id_range_offset[i]
 
-              @code_map[code] = glyph_id & 0xFFFF
+            if range_offset.zero?
+              start.upto(tail) do |code|
+                @code_map[code] = (code + delta) & 0xFFFF
+              end
+            else
+              index_base = (range_offset / 2) - start - (segcount - i)
+              start.upto(tail) do |code|
+                # Because some TTF fonts are broken
+                glyph_id = glyph_ids[index_base + code] || 0
+                glyph_id += delta if glyph_id != 0
+                @code_map[code] = glyph_id & 0xFFFF
+              end
             end
           end
         end

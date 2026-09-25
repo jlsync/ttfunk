@@ -29,7 +29,7 @@ module TTFunk
           charmap
             .reject { |code, mapping| mapping[:new].zero? && !code.zero? }
             .sort_by { |_code, mapping| mapping[:new] }
-            .map { |(_code, mapping)| items[mapping[:old]] }
+            .map { |(_code, mapping)| item(mapping[:old]) }
         end
 
         def font_dict_for(index)
