@@ -17,7 +17,7 @@ module TTFunk
     # @param pos [Integer] bit position
     # @return [void]
     def on(pos)
-      @value |= (1 << pos)
+      @value |= 2**pos
     end
 
     # If bit on?
@@ -25,7 +25,7 @@ module TTFunk
     # @param pos [Integer]
     # @return [Boolean]
     def on?(pos)
-      (value & (1 << pos)) != 0
+      value.allbits?(2**pos)
     end
 
     # Set bit off.
@@ -33,7 +33,7 @@ module TTFunk
     # @param pos [Integer]
     # @return [void]
     def off(pos)
-      @value &= ~(1 << pos)
+      @value &= (2**Math.log2(value).ceil) - (2**pos) - 1
     end
 
     # Is bit off?

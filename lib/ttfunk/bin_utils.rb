@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module TTFunk # rubocop: disable Style/Documentation # false positive
+module TTFunk
   # Bit crunching utility methods.
   module BinUtils
     # Turn a bunch of small integers into one big integer. Assumes big-endian.
@@ -17,6 +17,7 @@ module TTFunk # rubocop: disable Style/Documentation # false positive
 
       value
     end
+    module_function :stitch_int
 
     # Slice a big integer into a bunch of small integers. Assumes big-endian.
     #
@@ -32,6 +33,7 @@ module TTFunk # rubocop: disable Style/Documentation # false positive
         (value >> (bit_width * i)) & mask
       end
     end
+    module_function :slice_int
 
     # Two's compliment to an integer.
     #
@@ -49,6 +51,7 @@ module TTFunk # rubocop: disable Style/Documentation # false positive
         num
       end
     end
+    module_function :twos_comp_to_int
 
     # Turns a (sorted) sequence of values into a series of two-element arrays
     # where the first element is the start and the second is the length.
@@ -60,7 +63,6 @@ module TTFunk # rubocop: disable Style/Documentation # false positive
         .slice_when { |a, b| b - a > 1 }
         .map { |span| [span.first, span.length - 1] }
     end
+    module_function :rangify
   end
-
-  BinUtils.extend(BinUtils)
 end

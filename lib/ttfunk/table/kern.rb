@@ -65,10 +65,10 @@ module TTFunk
           length: length,
           coverage: coverage,
           data: raw[10..],
-          vertical: (coverage & 0x1).zero?,
-          minimum: (coverage & 0x2 != 0),
-          cross: (coverage & 0x4 != 0),
-          override: (coverage & 0x8 != 0),
+          vertical: coverage.nobits?(0x1),
+          minimum: coverage.allbits?(0x2),
+          cross: coverage.allbits?(0x4),
+          override: coverage.allbits?(0x8),
         )
       end
 
@@ -83,9 +83,9 @@ module TTFunk
             coverage: coverage,
             tuple_index: tuple_index,
             data: io.read(length - 8),
-            vertical: (coverage & 0x8000 != 0),
-            cross: (coverage & 0x4000 != 0),
-            variation: (coverage & 0x2000 != 0),
+            vertical: coverage.nobits?(0x8000),
+            cross: coverage.allbits?(0x4000),
+            variation: coverage.allbits?(0x2000),
           )
         end
       end

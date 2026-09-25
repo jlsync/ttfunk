@@ -145,15 +145,10 @@ describe 'subsetting' do # rubocop: disable RSpec/DescribeClass
     subset.use(97)
     name = TTFunk::File.new(subset.encode).name
 
-    records = []
-    name.entries.each do |entry|
-      records << [
-        entry[:platform_id],
-        entry[:encoding_id],
-        entry[:language_id],
-        entry[:name_id],
-      ]
-    end
+    records =
+      name.entries.map { |entry|
+        entry.values_at(:platform_id, :encoding_id, :language_id, :name_id)
+      }
 
     expect(records).to eq(records.sort)
   end

@@ -110,22 +110,22 @@ module TTFunk
             @glyph_ids << glyph_id
             @glyph_id_offsets << (offset + 2)
 
-            break if (flags & MORE_COMPONENTS).zero?
+            break if flags.nobits?(MORE_COMPONENTS)
 
             offset += 4
 
             offset +=
-              if (flags & ARG_1_AND_2_ARE_WORDS).zero?
+              if flags.nobits?(ARG_1_AND_2_ARE_WORDS)
                 2
               else
                 4
               end
 
-            if flags & WE_HAVE_A_TWO_BY_TWO != 0
+            if flags.allbits?(WE_HAVE_A_TWO_BY_TWO)
               offset += 8
-            elsif flags & WE_HAVE_AN_X_AND_Y_SCALE != 0
+            elsif flags.allbits?(WE_HAVE_AN_X_AND_Y_SCALE)
               offset += 4
-            elsif flags & WE_HAVE_A_SCALE != 0
+            elsif flags.allbits?(WE_HAVE_A_SCALE)
               offset += 2
             end
           end

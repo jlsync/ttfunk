@@ -107,7 +107,7 @@ module TTFunk
         #
         # @return [Boolean]
         def unicode?
-          (platform_id == 3 && (encoding_id == 1 || encoding_id == 10) && format != 0) ||
+          (platform_id == 3 && [1, 10].include?(encoding_id) && format != 0) ||
             (platform_id.zero? && format != 0)
         end
 

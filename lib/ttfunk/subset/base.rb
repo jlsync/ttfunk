@@ -101,11 +101,10 @@ module TTFunk
             h[id] = glyph_for(id)
           end
 
-        additional_ids = []
-        collected.values.each do |g|
-          next unless g && g.compound?
-          additional_ids.concat(g.glyph_ids)
-        end
+        additional_ids = collected.values
+          .select { |g| g&.compound? }
+          .map(&:glyph_ids)
+          .flatten
 
         collected.update(collect_glyphs(additional_ids)) if additional_ids.any?
 

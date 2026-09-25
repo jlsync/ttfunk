@@ -434,22 +434,18 @@ module TTFunk
           result << os2.vendor_id
 
           new_cmap_table = subset.new_cmap_table[:charmap]
-          # Compute min/max in a single pass to avoid sorting overhead.
-          min_cp = nil
-          max_cp = nil
-          new_cmap_table.each_key do |cp|
-            next unless new_cmap_table[cp][:new].positive?
-            min_cp = cp if min_cp.nil? || cp < min_cp
-            max_cp = cp if max_cp.nil? || cp > max_cp
-          end
+          code_points = new_cmap_table
+            .keys
+            .select { |k| new_cmap_table[k][:new].positive? }
+            .sort
 
           # "This value depends on which character sets the font supports.
           # This field cannot represent supplementary character values
           # (codepoints greater than 0xFFFF). Fonts that support
           # supplementary characters should set the value in this field
           # to 0xFFFF."
-          first_char_index = [min_cp || 0, UNICODE_MAX].min
-          last_char_index = [max_cp || 0, UNICODE_MAX].min
+          first_char_index = [code_points.first || 0, UNICODE_MAX].min
+          last_char_index = [code_points.last || 0, UNICODE_MAX].min
 
           result << [
             os2.selection, first_char_index, last_char_index,
@@ -509,25 +505,18 @@ module TTFunk
         end
 
         def group_original_code_points_by_bit(os2)
-          result = Hash.new { |h, k| h[k] = [] }
-          code_points = os2.file.cmap.unicode.first.code_map.keys.sort
-          i = 0
-          total = code_points.length
-
-          UNICODE_RANGES.each do |r|
-            # advance to start of range
-            i += 1 while i < total && code_points[i] < r.min
-            # collect within range
-            while i < total && code_points[i] <= r.max
-              if (bit = UNICODE_BLOCKS[r])
-                result[bit] << code_points[i]
+          Hash.new { |h, k| h[k] = [] }.tap do |result|
+            code_points = os2.file.cmap.unicode.first.code_map.keys.sort
+            UNICODE_RANGES.each do |r|
+              code_points = code_points.drop_while { |p| p < r.min }
+              code_points.take_while { |p| p <= r.max }.each do |code_point|
+                if (bit = UNICODE_BLOCKS[r])
+                  result[bit] << code_point
+                end
               end
-              i += 1
+              code_points = code_points.drop_while { |p| p <= r.max }
             end
-            break if i >= total
           end
-
-          result
         end
 
         def avg_char_width_for(os2, subset)

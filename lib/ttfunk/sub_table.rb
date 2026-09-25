@@ -19,7 +19,7 @@ module TTFunk
     # @return [Integer]
     attr_reader :table_offset
 
-    # This sub-table's length in byes.
+    # This sub-table's length in bytes.
     # @return [Integer, nil]
     attr_reader :length
 

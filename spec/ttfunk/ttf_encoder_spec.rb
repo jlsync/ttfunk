@@ -9,11 +9,12 @@ RSpec.describe TTFunk::TTFEncoder do
   let(:original) { TTFunk::File.open(original_font_path) }
 
   let(:encoder_options) { {} }
+  let(:subset_characters) { 'a'..'z' }
   let(:encoder) do
     subset =
       TTFunk::Subset::Unicode.new(original).tap do |sub_set|
         # ASCII lowercase
-        (97..122).each { |char| sub_set.use(char) }
+        subset_characters.each { |char| sub_set.use(char.ord) }
       end
 
     described_class.new(original, subset, encoder_options)
@@ -65,7 +66,16 @@ RSpec.describe TTFunk::TTFEncoder do
 
       # verified via the Font-Validator tool at:
       # https://github.com/HinTak/Font-Validator
-      expect(checksum).to eq(0xEEAE9DCF)
+      expect(checksum).to eq(0xEEB49DA9)
+    end
+
+    example_group 'maxp regression', issue: 102 do
+      let(:subset_characters) { ['A'] }
+
+      it 'correctly encodes maxp table for subset' do
+        maxp = new_font.maximum_profile
+        expect(maxp.max_points).to eq 11
+      end
     end
   end
 end
