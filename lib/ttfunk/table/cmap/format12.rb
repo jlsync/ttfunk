@@ -90,10 +90,12 @@ module TTFunk
               "cmap version 12.#{fractional_version} is not supported"
           end
           @code_map = {}
-          (1..groupcount).each do
-            startchar, endchar, startglyph = read(12, 'NNN')
-            (0..(endchar - startchar)).each do |offset|
-              @code_map[startchar + offset] = startglyph + offset
+          groups = read(groupcount * 12, 'N*')
+          groupcount.times do |i|
+            startchar, endchar, startglyph = groups[i * 3, 3]
+            glyph_delta = startglyph - startchar
+            startchar.upto(endchar) do |code|
+              @code_map[code] = code + glyph_delta
             end
           end
         end

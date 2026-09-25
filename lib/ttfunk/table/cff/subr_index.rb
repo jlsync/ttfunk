@@ -10,9 +10,9 @@ module TTFunk
         # accessing the index.
         # @return [Integer]
         def bias
-          if items.length < 1240
+          if items_count < 1240
             107
-          elsif items.length < 33_900
+          elsif items_count < 33_900
             1131
           else
             32_768

@@ -507,14 +507,17 @@ module TTFunk
         def group_original_code_points_by_bit(os2)
           Hash.new { |h, k| h[k] = [] }.tap do |result|
             code_points = os2.file.cmap.unicode.first.code_map.keys.sort
+            count = code_points.length
+            i = 0
             UNICODE_RANGES.each do |r|
-              code_points = code_points.drop_while { |p| p < r.min }
-              code_points.take_while { |p| p <= r.max }.each do |code_point|
-                if (bit = UNICODE_BLOCKS[r])
-                  result[bit] << code_point
-                end
+              min = r.min
+              max = r.max
+              bit = UNICODE_BLOCKS[r]
+              i += 1 while i < count && code_points[i] < min
+              while i < count && code_points[i] <= max
+                result[bit] << code_points[i] if bit
+                i += 1
               end
-              code_points = code_points.drop_while { |p| p <= r.max }
             end
           end
         end

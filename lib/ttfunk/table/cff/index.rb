@@ -41,7 +41,7 @@ module TTFunk
         #
         # @return [Integer]
         def items_count
-          items.length
+          @offsets ? @offsets.length - 1 : 0
         end
 
         # Encode index.
@@ -67,23 +67,32 @@ module TTFunk
 
           offset_size = (offsets_array.last.bit_length / 8.0).ceil
 
-          offsets_array.map! { |offset| encode_offset(offset, offset_size) }
-
           EncodedString.new.concat(
             [new_items.length, offset_size].pack('nC'),
-            *offsets_array,
+            encode_offsets(offsets_array, offset_size),
             *new_items,
           )
         end
 
         private
 
-        attr_reader :items
         attr_reader :offsets
         attr_reader :data_reference_offset
 
         def entry_cache
           @entry_cache ||= {}
+        end
+
+        # All raw items. Sliced from the index data on first use.
+        def items
+          @items ||= Array.new(items_count) { |i| item(i) }
+        end
+
+        # Raw item at the given index.
+        def item(index)
+          return @items[index] if @items
+
+          @data.byteslice(offsets[index] - offsets[0], offsets[index + 1] - offsets[index])
         end
 
         # Returns an array of EncodedString elements (plain strings,
@@ -100,19 +109,19 @@ module TTFunk
 
         # By default do nothing
         def decode_item(index, _offset, _length)
-          items[index]
+          item(index)
         end
 
-        def encode_offset(offset, offset_size)
+        def encode_offsets(offsets, offset_size)
           case offset_size
           when 1
-            [offset].pack('C')
+            offsets.pack('C*')
           when 2
-            [offset].pack('n')
+            offsets.pack('n*')
           when 3
-            [offset].pack('N')[1..]
+            offsets.flat_map { |offset| [offset >> 16, offset & 0xffff] }.pack('Cn' * offsets.length)
           when 4
-            [offset].pack('N')
+            offsets.pack('N*')
           end
         end
 
@@ -129,10 +138,7 @@ module TTFunk
 
           offset_size = read(1, 'C').first
 
-          @offsets =
-            Array.new(num_entries + 1) {
-              unpack_offset(io.read(offset_size), offset_size)
-            }
+          @offsets = unpack_offsets(io.read((num_entries + 1) * offset_size), offset_size)
 
           @data_reference_offset = table_offset + 3 + (offsets.length * offset_size) - 1
 
@@ -142,15 +148,24 @@ module TTFunk
             (offsets.length * offset_size) + # offsets
             offsets.last - 1 # items
 
-          @items =
-            offsets.each_cons(2).map { |offset, next_offset|
-              io.read(next_offset - offset)
-            }
+          # Items are sliced lazily from this data, see #item.
+          @data = io.read(offsets.last - offsets.first)
         end
 
-        def unpack_offset(offset_data, offset_size)
-          padding = "\x00" * (4 - offset_size)
-          (padding + offset_data).unpack1('N')
+        def unpack_offsets(offset_data, offset_size)
+          case offset_size
+          when 1
+            offset_data.unpack('C*')
+          when 2
+            offset_data.unpack('n*')
+          when 3
+            bytes = offset_data.unpack('C*')
+            Array.new(bytes.length / 3) { |i|
+              (bytes[i * 3] << 16) | (bytes[(i * 3) + 1] << 8) | bytes[(i * 3) + 2]
+            }
+          when 4
+            offset_data.unpack('N*')
+          end
         end
       end
     end

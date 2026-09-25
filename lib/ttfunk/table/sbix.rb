@@ -79,16 +79,13 @@ module TTFunk
 
       def parse!
         @version, @flags, @num_strikes = read(8, 'n2N')
-        strike_offsets = Array.new(num_strikes) { read(4, 'N').first }
+        strike_offsets = read(num_strikes * 4, 'N*')
 
         @strikes =
           strike_offsets.map { |strike_offset|
             parse_from(offset + strike_offset) {
               ppem, resolution = read(4, 'n2')
-              data_offsets =
-                Array.new(file.maximum_profile.num_glyphs + 1) {
-                  read(4, 'N').first
-                }
+              data_offsets = read((file.maximum_profile.num_glyphs + 1) * 4, 'N*')
               {
                 ppem: ppem,
                 resolution: resolution,
