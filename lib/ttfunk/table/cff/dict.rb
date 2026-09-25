@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'bigdecimal'
-
 module TTFunk
   class Table
     class Cff < TTFunk::Table
@@ -92,7 +90,7 @@ module TTFunk
           case operand
           when Integer
             encode_integer(operand)
-          when Float, BigDecimal
+          when Float, ->(op) { defined?(BigDecimal) && op.is_a?(BigDecimal) }
             encode_float(operand)
           when SciForm
             encode_sci(operand)
@@ -141,7 +139,11 @@ module TTFunk
         end
 
         def encode_significand(sig)
-          sig.to_s.each_char.with_object([]) do |char, ret|
+          if defined?(BigDecimal) && sig.is_a?(BigDecimal)
+            sig.to_s('F')
+          else
+            sig.to_s
+          end.each_char.with_object([]) do |char, ret|
             case char
             when '0'..'9'
               ret << Integer(char)

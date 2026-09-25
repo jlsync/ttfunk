@@ -103,13 +103,13 @@ module TTFunk
         count = mapping.length
         table << [count].pack('n')
 
-        mapping.sort.each do |new_id, old_id|
+        mapping.sort.each do |_new_id, old_id|
           post_glyph = glyph_for(old_id)
           position = Format10::POSTSCRIPT_GLYPHS_INDEX[post_glyph]
           if position
             table << [position].pack('n')
           else
-            table << [(257 + strings.length)].pack('n')
+            table << [257 + strings.length].pack('n')
             strings << post_glyph
           end
         end

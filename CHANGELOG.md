@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+* `maxp` table encoding
+
+  The table was encoded with the reverse subset indexinx. This resulted in
+  incorrect values being encoded in `maxp` table. This tripped some of the more
+  fussy renderers like Adobe Acrobat, but also constrained implementations such
+  as in most printers.
+
+  Thomas Dy
+
 ## [1.8.0][] - 2024-03-05
 
 ### Fixed

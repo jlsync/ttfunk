@@ -143,7 +143,7 @@ module TTFunk
 
           end_code.each_with_index do |tail, i|
             start_code[i].upto(tail) do |code|
-              if (id_range_offset[i]).zero?
+              if id_range_offset[i].zero?
                 glyph_id = code + id_delta[i]
               else
                 index = (id_range_offset[i] / 2) + (code - start_code[i]) - (segcount - i)

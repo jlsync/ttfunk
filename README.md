@@ -45,4 +45,4 @@ Github users who have at least one patch accepted to TTFunk.
 TTFunk is maintained as a dependency of Prawn, the ruby PDF generation library.
 
 Any questions or feedback should be sent to the [Prawn
-Diccussions](https://github.com/orgs/prawnpdf/discussions) group.
+Discussions](https://github.com/orgs/prawnpdf/discussions) group.

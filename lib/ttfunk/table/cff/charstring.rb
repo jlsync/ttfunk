@@ -126,16 +126,16 @@ module TTFunk
             # return from callgsubr - do nothing since we inline subrs
             next if code == 11
 
-            if code >= 32 && code <= 246
+            if code.between?(32, 246)
               @stack << (code - 139)
             elsif (m = CODE_MAP[code])
               __send__(m)
-            elsif code >= 247 && code <= 250
+            elsif code.between?(247, 250)
               b0 = code
               b1 = @data[@index]
               @index += 1
               @stack << (((b0 - 247) * 256) + b1 + 108)
-            elsif code >= 251 && code <= 254
+            elsif code.between?(251, 254)
               b0 = code
               b1 = @data[@index]
               @index += 1

@@ -1,9 +1,6 @@
 inherit_gem:
   prawn-dev: rubocop.yml
 
-RSpec/FilePath:
-  Enabled: false
-
 RSpec/MultipleMemoizedHelpers:
   Max: 7
   Exclude:
@@ -19,7 +16,6 @@ RSpec/SpecFilePathFormat:
 Style/FormatStringToken:
   Exclude:
     - examples/metrics.rb
-
 
 Style/Documentation:
   Exclude:
