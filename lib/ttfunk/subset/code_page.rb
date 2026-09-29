@@ -92,9 +92,18 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [Integer, nil]
       def from_unicode(character)
-        @from_unicode_cache[character] ||= (+'' << character).encode!(encoding).ord
-      rescue Encoding::UndefinedConversionError
-        nil
+        cached = @from_unicode_cache[character]
+        return cached if cached
+        return if @from_unicode_cache.key?(character)
+
+        # Remember unsupported characters too, so subsequent lookups do not
+        # repeat a conversion that raises an exception.
+        @from_unicode_cache[character] =
+          begin
+            (+'' << character).encode!(encoding).ord
+          rescue Encoding::UndefinedConversionError
+            nil
+          end
       end
 
       # Get `cmap` table for this subset.
