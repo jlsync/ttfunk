@@ -65,40 +65,27 @@ module TTFunk
     #   font, and so may not look (in the raw) like what was passed in, but they
     #   will render correctly with the corresponding subset font.
     def encode(characters)
-      return [] if characters.empty?
-
-      # TODO: probably would be more optimal to nix the #use method,
-      # and merge it into this one, so it can be done in a single
-      # pass instead of two passes.
-      use(characters)
-
       parts = []
       current_subset = 0
-      current_char = 0
-      char = characters[current_char]
 
-      loop do
-        while @subsets[current_subset].includes?(char)
-          char = @subsets[current_subset].from_unicode(char)
-
-          if parts.empty? || parts.last[0] != current_subset
-            encoded_char = char.chr
-            if encoded_char.respond_to?(:force_encoding)
-              encoded_char.force_encoding('ASCII-8BIT')
-            end
-            parts << [current_subset, encoded_char]
-          else
-            parts.last[1] << char
-          end
-
-          current_char += 1
-          return parts if current_char >= characters.length
-
-          char = characters[current_char]
+      characters.each do |char|
+        starting_subset = current_subset
+        # Keep spaces in the current subset, and register a character only
+        # after checking every existing subset for it.
+        until @subsets[current_subset].includes?(char)
+          current_subset = (current_subset + 1) % @subsets.length
+          use([char]) if current_subset == starting_subset
         end
 
-        current_subset = (current_subset + 1) % @subsets.length
+        encoded = @subsets[current_subset].from_unicode(char)
+        if parts.empty? || parts.last[0] != current_subset
+          parts << [current_subset, encoded.chr(Encoding::BINARY)]
+        else
+          parts.last[1] << encoded
+        end
       end
+
+      parts
     end
   end
 end
