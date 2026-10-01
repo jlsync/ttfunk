@@ -59,19 +59,21 @@ module TTFunk
             raise Error, 'Too many items in a CFF index'
           end
 
-          offsets_array =
-            new_items
-              .each_with_object([1]) { |item, offsets|
-                offsets << (offsets.last + item.length)
-              }
+          offsets_array = [1]
+          current_offset = 1
+          new_items.each do |item|
+            current_offset += item.length
+            offsets_array << current_offset
+          end
 
-          offset_size = (offsets_array.last.bit_length / 8.0).ceil
+          offset_size = (offsets_array.last.bit_length + 7) / 8
 
-          EncodedString.new.concat(
+          result = EncodedString.new.concat(
             [new_items.length, offset_size].pack('nC'),
             encode_offsets(offsets_array, offset_size),
-            *new_items,
           )
+          new_items.each { |item| result << item }
+          result
         end
 
         private
@@ -136,7 +138,7 @@ module TTFunk
             return
           end
 
-          offset_size = read(1, 'C').first
+          offset_size = io.getbyte
 
           @offsets = unpack_offsets(io.read((num_entries + 1) * offset_size), offset_size)
 

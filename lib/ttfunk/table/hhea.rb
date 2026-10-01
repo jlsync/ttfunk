@@ -97,48 +97,44 @@ module TTFunk
         private
 
         def min_max_values_for(original, mapping)
-          min_lsb = Min.new
-          min_rsb = Min.new
-          max_aw = Max.new
-          max_extent = Max.new
+          min_lsb = nil
+          min_rsb = nil
+          max_aw = nil
+          max_extent = nil
 
           mapping.each_value do |old_glyph_id|
             horiz_metrics = original.horizontal_metrics.for(old_glyph_id)
             next unless horiz_metrics
 
-            min_lsb << horiz_metrics.left_side_bearing
-            max_aw << horiz_metrics.advance_width
+            lsb = horiz_metrics.left_side_bearing
+            aw = horiz_metrics.advance_width
+            min_lsb = lsb if min_lsb.nil? || lsb < min_lsb
+            max_aw = aw if max_aw.nil? || aw > max_aw
 
             glyph = original.find_glyph(old_glyph_id)
             next unless glyph
 
             x_delta = glyph.x_max - glyph.x_min
+            rsb = aw - lsb - x_delta
+            extent = lsb + x_delta
 
-            min_rsb << (horiz_metrics.advance_width - horiz_metrics.left_side_bearing - x_delta)
-
-            max_extent << (horiz_metrics.left_side_bearing + x_delta)
+            min_rsb = rsb if min_rsb.nil? || rsb < min_rsb
+            max_extent = extent if max_extent.nil? || extent > max_extent
           end
 
-          [
-            max_aw.value_or(0), min_lsb.value_or(0),
-            min_rsb.value_or(0), max_extent.value_or(0),
-          ]
+          [max_aw || 0, min_lsb || 0, min_rsb || 0, max_extent || 0]
         end
       end
 
       private
 
       def parse!
-        @version = io.read(4).unpack1('N')
-        @ascent, @descent, @line_gap = read_signed(3)
-        @advance_width_max = io.read(2).unpack1('n')
-
-        @min_left_side_bearing, @min_right_side_bearing, @x_max_extent,
+        @version, @ascent, @descent, @line_gap, @advance_width_max,
+          @min_left_side_bearing, @min_right_side_bearing, @x_max_extent,
           @caret_slope_rise, @caret_slope_run, @caret_offset,
-          _reserved, _reserved, _reserved, _reserved,
-          @metric_data_format = read_signed(11)
-
-        @number_of_metrics = io.read(2).unpack1('n')
+          _reserved1, _reserved2, _reserved3, _reserved4,
+          @metric_data_format,
+          @number_of_metrics = read(36, 'Ns>3ns>11n')
       end
     end
   end

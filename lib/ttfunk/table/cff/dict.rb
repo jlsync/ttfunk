@@ -176,7 +176,7 @@ module TTFunk
 
           # @length must be set via the constructor
           while io.pos < table_offset + length
-            case b_zero = read(1, 'C').first
+            case b_zero = io.getbyte
             when WIDE_OPERATOR_BZERO
               operator = decode_wide_operator
               @dict[operator] = operands
@@ -198,7 +198,7 @@ module TTFunk
         end
 
         def decode_wide_operator
-          WIDE_OPERATOR_ADJUSTMENT + read(1, 'C').first
+          WIDE_OPERATOR_ADJUSTMENT + io.getbyte
         end
 
         def decode_operand(b_zero)
@@ -215,7 +215,7 @@ module TTFunk
           exponent = ''.b
 
           loop do
-            current = read(1, 'C').first
+            current = io.getbyte
             break if current == 0xFF
 
             high_nibble = current >> 4
@@ -275,23 +275,21 @@ module TTFunk
 
           when 247..250
             # 2 bytes
-            b_one = read(1, 'C').first
+            b_one = io.getbyte
             ((b_zero - 247) * 256) + b_one + 108
 
           when 251..254
             # 2 bytes
-            b_one = read(1, 'C').first
+            b_one = io.getbyte
             (-(b_zero - 251) * 256) - b_one - 108
 
           when 28
             # 2 bytes in number (3 total)
-            b_one, b_two = read(2, 'C*')
-            BinUtils.twos_comp_to_int((b_one << 8) | b_two, bit_width: 16)
+            io.read(2).unpack1('s>')
 
           when 29
             # 4 bytes in number (5 total)
-            b_one, b_two, b_three, b_four = read(4, 'C*')
-            BinUtils.twos_comp_to_int((b_one << 24) | (b_two << 16) | (b_three << 8) | b_four, bit_width: 32)
+            io.read(4).unpack1('l>')
           end
         end
       end

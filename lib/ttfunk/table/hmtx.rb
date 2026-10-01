@@ -28,15 +28,15 @@ module TTFunk
       #   * `:table` - encoded table.
       def self.encode(hmtx, mapping)
         sorted_ids = mapping.keys.sort
-        buf = +''
+        metrics_data = []
         sorted_ids.each do |new_id|
           metric = hmtx.for(mapping[new_id])
-          buf << [metric.advance_width, metric.left_side_bearing].pack('n*')
+          metrics_data << metric.advance_width << metric.left_side_bearing
         end
 
         {
           number_of_metrics: sorted_ids.length,
-          table: buf,
+          table: metrics_data.pack('n*'),
         }
       end
 
@@ -69,10 +69,10 @@ module TTFunk
 
       def parse!
         number_of_metrics = file.horizontal_header.number_of_metrics
-        values = read(number_of_metrics * 4, 'n*')
+        values = read(number_of_metrics * 4, 'ns>' * number_of_metrics)
         @metrics =
           Array.new(number_of_metrics) { |i|
-            HorizontalMetric.new(values[i * 2], to_signed(values[(i * 2) + 1]))
+            HorizontalMetric.new(values[i * 2], values[(i * 2) + 1])
           }
 
         lsb_count = file.maximum_profile.num_glyphs -
@@ -85,7 +85,7 @@ module TTFunk
         @metrics.length.times { |i| @widths[i] = @metrics[i].advance_width }
         # fill remaining with last width
         last = @metrics.last.advance_width
-        (@metrics.length...total).each { |i| @widths[i] = last }
+        @widths.fill(last, @metrics.length)
       end
     end
   end

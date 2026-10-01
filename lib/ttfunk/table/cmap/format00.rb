@@ -41,7 +41,7 @@ module TTFunk
           end
 
           # format, length, language, indices
-          subtable = [0, 262, 0, *glyph_indexes].pack('nnnC*')
+          subtable = [0, 262, 0].pack('nnn') << glyph_indexes.pack('C*')
 
           { charmap: new_map, subtable: subtable, max_glyph_id: next_id + 1 }
         end

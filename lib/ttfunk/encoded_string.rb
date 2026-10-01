@@ -64,9 +64,8 @@ module TTFunk
     # @param width [Integer]
     # @return [self]
     def align!(width = 4)
-      if (length % width).positive?
-        self << ("\0" * (width - (length % width)))
-      end
+      rem = length % width
+      self << ("\0" * (width - rem)) if rem.positive?
 
       self
     end

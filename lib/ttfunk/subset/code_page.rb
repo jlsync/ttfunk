@@ -57,8 +57,9 @@ module TTFunk
       #
       # @return [Hash]
       def to_unicode_map
-        self.class.unicode_mapping_for(encoding)
-          .select { |codepoint, _unicode| @subset[codepoint] }
+        @to_unicode_map ||=
+          self.class.unicode_mapping_for(encoding)
+            .select { |codepoint, _unicode| @subset[codepoint] }
       end
 
       # Add a character to subset.
@@ -66,6 +67,8 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [void]
       def use(character)
+        @to_unicode_map = nil
+        @new_cmap_table = nil
         @subset[from_unicode(character)] = character
       end
 

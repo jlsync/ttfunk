@@ -30,15 +30,11 @@ module TTFunk
     # @param io [IO(#read & #rewind)]
     # @raise [ArgumentError] if `io` doesn't start with a ttc tag
     def initialize(io)
-      tag = io.read(4)
-      raise ArgumentError, 'not a TTC file' unless tag == 'ttcf'
-
-      _major, _minor = io.read(4).unpack('n*')
-      count = io.read(4).unpack1('N')
-      @offsets = io.read(count * 4).unpack('N*')
-
-      io.rewind
       @contents = io.read
+      raise ArgumentError, 'not a TTC file' unless @contents&.start_with?('ttcf')
+
+      count = @contents.byteslice(8, 4).unpack1('N')
+      @offsets = @contents.byteslice(12, count * 4).unpack('N*')
       @cache = []
     end
 

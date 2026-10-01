@@ -28,7 +28,7 @@ module TTFunk
       #
       # @return [Hash{Integer => Integer}]
       def to_unicode_map
-        @subset.each_with_object({}) { |code, map| map[code] = code }
+        @to_unicode_map ||= @subset.each_with_object({}) { |code, map| map[code] = code }
       end
 
       # Add a character to subset.
@@ -36,6 +36,8 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [void]
       def use(character)
+        @to_unicode_map = nil
+        @new_cmap_table = nil
         @subset << character
       end
 

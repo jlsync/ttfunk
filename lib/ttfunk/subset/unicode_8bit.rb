@@ -27,7 +27,7 @@ module TTFunk
       #
       # @return [Hash{Integer => Integer}]
       def to_unicode_map
-        @subset.dup
+        @to_unicode_map ||= @subset.dup
       end
 
       # Add a character to subset.
@@ -36,6 +36,8 @@ module TTFunk
       # @return [void]
       def use(character)
         unless @unicodes.key?(character)
+          @to_unicode_map = nil
+          @new_cmap_table = nil
           @subset[@next] = character
           @unicodes[character] = @next
           @next += 1

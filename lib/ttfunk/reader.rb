@@ -15,11 +15,11 @@ module TTFunk
     end
 
     def read_signed(count)
-      read(count * 2, 'n*').map { |i| to_signed(i) }
+      read(count * 2, 's>*')
     end
 
     def to_signed(number)
-      number >= 0x8000 ? -((number ^ 0xFFFF) + 1) : number
+      number >= 0x8000 ? number - 0x10000 : number
     end
 
     def parse_from(position)

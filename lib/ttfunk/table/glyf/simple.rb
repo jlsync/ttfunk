@@ -52,16 +52,14 @@ module TTFunk
         def initialize(id, raw)
           @id = id
           @raw = raw
-          io = StringIO.new(raw)
 
-          @number_of_contours, @x_min, @y_min, @x_max, @y_max =
-            io.read(10).unpack('n*').map { |i|
-              BinUtils.twos_comp_to_int(i, bit_width: 16)
-            }
+          @number_of_contours, @x_min, @y_min, @x_max, @y_max = raw.unpack('s>5')
 
-          @end_points_of_contours = io.read(number_of_contours * 2).unpack('n*')
-          @instruction_length = io.read(2).unpack1('n')
-          @instructions = io.read(instruction_length).unpack('C*')
+          endpoints_len = number_of_contours * 2
+          @end_points_of_contours = raw.byteslice(10, endpoints_len).unpack('n*')
+          offset = 10 + endpoints_len
+          @instruction_length = raw.byteslice(offset, 2).unpack1('n')
+          @instructions = raw.byteslice(offset + 2, instruction_length).unpack('C*')
         end
 
         # Is this glyph compound?

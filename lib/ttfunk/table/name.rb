@@ -209,7 +209,7 @@ module TTFunk
         items.each do |id, string|
           table << [
             string.platform_id, string.encoding_id, string.language_id, id,
-            string.length, strtable.length,
+            string.bytesize, strtable.bytesize,
           ].pack('n*')
           strtable << string
         end
@@ -231,18 +231,19 @@ module TTFunk
         count, string_offset = read(6, 'x2n*')
 
         @entries = []
-        count.times do
-          platform, encoding, language, id, length, start_offset =
-            read(12, 'n*')
-          @entries << {
-            platform_id: platform,
-            encoding_id: encoding,
-            language_id: language,
-            name_id: id,
-            length: length,
-            offset: offset + string_offset + start_offset,
-            text: nil,
-          }
+        if count.positive?
+          raw_entries = read(count * 12, 'n*')
+          raw_entries.each_slice(6) do |slice|
+            @entries << {
+              platform_id: slice[0],
+              encoding_id: slice[1],
+              language_id: slice[2],
+              name_id: slice[3],
+              length: slice[4],
+              offset: offset + string_offset + slice[5],
+              text: nil,
+            }
+          end
         end
 
         @strings = Hash.new { |h, k| h[k] = [] }

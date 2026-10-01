@@ -122,25 +122,27 @@ module TTFunk
         private
 
         def min_max_values_for(head, mapping)
-          x_min = Min.new
-          x_max = Max.new
-          y_min = Min.new
-          y_max = Max.new
+          x_min = nil
+          x_max = nil
+          y_min = nil
+          y_max = nil
 
           mapping.each_value do |old_glyph_id|
             glyph = head.file.find_glyph(old_glyph_id)
             next unless glyph
 
-            x_min << glyph.x_min
-            x_max << glyph.x_max
-            y_min << glyph.y_min
-            y_max << glyph.y_max
+            gx_min = glyph.x_min
+            gx_max = glyph.x_max
+            gy_min = glyph.y_min
+            gy_max = glyph.y_max
+
+            x_min = gx_min if x_min.nil? || gx_min < x_min
+            x_max = gx_max if x_max.nil? || gx_max > x_max
+            y_min = gy_min if y_min.nil? || gy_min < y_min
+            y_max = gy_max if y_max.nil? || gy_max > y_max
           end
 
-          [
-            x_min.value_or(0), y_min.value_or(0),
-            x_max.value_or(0), y_max.value_or(0),
-          ]
+          [x_min || 0, y_min || 0, x_max || 0, y_max || 0]
         end
       end
 
@@ -148,12 +150,10 @@ module TTFunk
 
       def parse!
         @version, @font_revision, @check_sum_adjustment, @magic_number,
-          @flags, @units_per_em, @created, @modified = read(36, 'N4n2q>2')
-
-        @x_min, @y_min, @x_max, @y_max = read_signed(4)
-
-        @mac_style, @lowest_rec_ppem, @font_direction_hint,
-          @index_to_loc_format, @glyph_data_format = read(10, 'n*')
+          @flags, @units_per_em, @created, @modified,
+          @x_min, @y_min, @x_max, @y_max,
+          @mac_style, @lowest_rec_ppem, @font_direction_hint,
+          @index_to_loc_format, @glyph_data_format = read(54, 'N4n2q>2s>4n5')
       end
     end
   end

@@ -206,20 +206,23 @@ module TTFunk
         @version, @num_glyphs = read(6, 'Nn')
 
         if @version == 0x10000
-          @max_points, @max_contours, @max_component_points,
-            @max_component_contours, @max_zones, @max_twilight_points,
-            @max_storage, @max_function_defs, @max_instruction_defs,
-            @max_stack_elements, @max_size_of_instructions,
-            @max_component_elements = read(24, 'n*')
+          if length == MAX_V1_TABLE_LENGTH
+            @max_points, @max_contours, @max_component_points,
+              @max_component_contours, @max_zones, @max_twilight_points,
+              @max_storage, @max_function_defs, @max_instruction_defs,
+              @max_stack_elements, @max_size_of_instructions,
+              @max_component_elements, @max_component_depth = read(26, 'n13')
+          else
+            @max_points, @max_contours, @max_component_points,
+              @max_component_contours, @max_zones, @max_twilight_points,
+              @max_storage, @max_function_defs, @max_instruction_defs,
+              @max_stack_elements, @max_size_of_instructions,
+              @max_component_elements = read(24, 'n*')
 
-          # a number of fonts omit these last two bytes for some reason,
-          # so we have to supply a default here to prevent nils
-          @max_component_depth =
-            if length == MAX_V1_TABLE_LENGTH
-              io.read(2).unpack1('n')
-            else
-              DEFAULT_MAX_COMPONENT_DEPTH
-            end
+            # a number of fonts omit these last two bytes for some reason,
+            # so we have to supply a default here to prevent nils
+            @max_component_depth = DEFAULT_MAX_COMPONENT_DEPTH
+          end
         end
       end
     end

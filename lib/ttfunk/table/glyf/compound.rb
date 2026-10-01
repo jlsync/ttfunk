@@ -85,12 +85,8 @@ module TTFunk
         def initialize(id, raw)
           @id = id
           @raw = raw
-          io = StringIO.new(raw)
 
-          @number_of_contours, @x_min, @y_min, @x_max, @y_max =
-            io.read(10).unpack('n*').map { |i|
-              BinUtils.twos_comp_to_int(i, bit_width: 16)
-            }
+          @number_of_contours, @x_min, @y_min, @x_max, @y_max = raw.unpack('s>5')
 
           # Because TTFunk only cares about glyphs insofar as they (1) provide
           # a bounding box for each glyph, and (2) can be rewritten into a
@@ -147,7 +143,8 @@ module TTFunk
           glyph_ids.each_with_index do |old_id, i|
             new_id = mapping[old_id]
             offset = @glyph_id_offsets[i]
-            result[offset, 2] = [new_id].pack('n')
+            result.setbyte(offset, (new_id >> 8) & 0xFF)
+            result.setbyte(offset + 1, new_id & 0xFF)
           end
           result
         end
