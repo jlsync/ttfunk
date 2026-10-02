@@ -44,7 +44,6 @@ jobs:
           - "4.0"
           - ruby-head
           - jruby-10.0
-          - jruby-10.1
     steps:
       - uses: actions/checkout@v4
       - name: Set up Ruby
