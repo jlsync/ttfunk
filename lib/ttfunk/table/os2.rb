@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative '../table'
-require 'set'
 
 module TTFunk
   class Table
@@ -373,7 +372,7 @@ module TTFunk
       CODEPOINT_SPACE = 32
 
       # Error message for missing space character.
-      SPACE_GLYPH_MISSING_ERROR = "Space glyph (0x#{CODEPOINT_SPACE.to_s(16)}) must be included in the font"
+      SPACE_GLYPH_MISSING_ERROR = "Space glyph (0x#{CODEPOINT_SPACE.to_s(16)}) must be included in the font".freeze
 
       # Used to calculate the xAvgCharWidth field.
       # From https://docs.microsoft.com/en-us/typography/opentype/spec/os2:
