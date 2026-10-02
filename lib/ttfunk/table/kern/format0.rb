@@ -23,11 +23,12 @@ module TTFunk
 
           data = attributes.delete(:data)
           num_pairs = data.unpack1('n')
-          pairs = data.byteslice(8..)&.unpack('n2s>*') || []
+          pair_bytes = data.byteslice(8..)
+          actual_pairs = [num_pairs, pair_bytes ? pair_bytes.bytesize / 6 : 0].min
+          pairs = actual_pairs.positive? ? pair_bytes.unpack('n2s>' * actual_pairs) : []
 
           @pairs = {}
-          max_pairs = [num_pairs, pairs.length / 3].min
-          max_pairs.times do |i|
+          actual_pairs.times do |i|
             idx = i * 3
             @pairs[[pairs[idx], pairs[idx + 1]]] = pairs[idx + 2]
           end

@@ -54,4 +54,12 @@ describe TTFunk::Subset::CodePage do
     expect(subset.includes?(0xe9)).to eq(0xe9)
     expect(subset.to_unicode_map).to include(0x8e => 0xe9)
   end
+
+  it 'returns an isolated copy of to_unicode_map' do
+    subset.use(0xe9)
+    map1 = subset.to_unicode_map
+    map1.delete(0x8e)
+
+    expect(subset.to_unicode_map).to include(0x8e => 0xe9)
+  end
 end

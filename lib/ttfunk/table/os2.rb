@@ -553,8 +553,10 @@ module TTFunk
         end
 
         def avg_weighted_char_width_for(os2, subset)
+          unicode_map = subset.to_unicode_map
+
           # make sure the subset includes the space char
-          unless subset.to_unicode_map[CODEPOINT_SPACE]
+          unless unicode_map[CODEPOINT_SPACE]
             raise SPACE_GLYPH_MISSING_ERROR
           end
 
@@ -569,7 +571,7 @@ module TTFunk
           # the subset
           LOWERCASE_START.upto(LOWERCASE_END) do |lowercase_cp|
             # make sure the subset includes the character
-            next unless subset.to_unicode_map[lowercase_cp]
+            next unless unicode_map[lowercase_cp]
 
             lowercase_gid = os2.file.cmap.unicode.first[lowercase_cp]
             lowercase_hm = os2.file.horizontal_metrics.for(lowercase_gid)

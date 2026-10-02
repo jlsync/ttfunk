@@ -60,6 +60,7 @@ module TTFunk
         @to_unicode_map ||=
           self.class.unicode_mapping_for(encoding)
             .select { |codepoint, _unicode| @subset[codepoint] }
+        @to_unicode_map.dup
       end
 
       # Add a character to subset.

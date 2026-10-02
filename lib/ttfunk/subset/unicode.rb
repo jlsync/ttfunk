@@ -29,6 +29,7 @@ module TTFunk
       # @return [Hash{Integer => Integer}]
       def to_unicode_map
         @to_unicode_map ||= @subset.each_with_object({}) { |code, map| map[code] = code }
+        @to_unicode_map.dup
       end
 
       # Add a character to subset.
