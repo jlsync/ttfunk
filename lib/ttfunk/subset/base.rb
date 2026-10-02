@@ -56,6 +56,17 @@ module TTFunk
         {}
       end
 
+      # Reset cached subset state.
+      #
+      # @return [void]
+      def reset_cache!
+        @to_unicode_map = nil
+        @new_cmap_table = nil
+        @glyphs = nil
+        @old_to_new_glyph = nil
+        @new_to_old_glyph = nil
+      end
+
       # Encode this subset into a binary font representation.
       #
       # @param options [Hash]

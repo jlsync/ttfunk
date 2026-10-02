@@ -36,7 +36,7 @@ module TTFunk
       # @return [void]
       def use(character)
         unless @unicodes.key?(character)
-          @new_cmap_table = nil
+          reset_cache!
           @subset[@next] = character
           @unicodes[character] = @next
           @next += 1

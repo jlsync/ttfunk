@@ -17,4 +17,13 @@ describe TTFunk::Subset::Unicode do
 
     expect(subset.to_unicode_map).to include(0x20 => 0x20)
   end
+
+  it 'invalidates glyph mappings and glyphs cache when adding a character after encoding' do
+    subset.use(0x41)
+    subset.encode
+    initial_glyph_count = subset.glyphs.size
+
+    subset.use(0x42)
+    expect(subset.glyphs.size).to be > initial_glyph_count
+  end
 end

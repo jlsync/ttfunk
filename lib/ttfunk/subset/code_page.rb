@@ -68,8 +68,7 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [void]
       def use(character)
-        @to_unicode_map = nil
-        @new_cmap_table = nil
+        reset_cache!
         @subset[from_unicode(character)] = character
       end
 
