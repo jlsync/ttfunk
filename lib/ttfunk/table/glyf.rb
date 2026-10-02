@@ -21,13 +21,13 @@ module TTFunk
 
         new_to_old.sort.each do |_new_id, old_id|
           glyph = glyphs[old_id]
-          result[:offsets] << result[:table].length
+          result[:offsets] << result[:table].bytesize
           result[:table] << glyph.recode(old_to_new) if glyph
         end
 
         # include an offset at the end of the table, for use in computing the
         # size of the last glyph
-        result[:offsets] << result[:table].length
+        result[:offsets] << result[:table].bytesize
         result
       end
 
@@ -49,7 +49,7 @@ module TTFunk
 
         parse_from(offset + index) do
           raw = io.read(size)
-          number_of_contours = to_signed(raw.unpack1('n'))
+          number_of_contours = raw.unpack1('s>')
 
           @cache[glyph_id] =
             if number_of_contours == -1

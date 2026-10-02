@@ -22,14 +22,13 @@ module TTFunk
       def self.encode(offsets)
         long_offsets =
           offsets.any? { |offset|
-            short_offset = offset / 2
-            short_offset * 2 != offset || short_offset > 0xffff
+            (offset & 1).nonzero? || offset > 0x1fffe
           }
 
         if long_offsets
           { type: 1, table: offsets.pack('N*') }
         else
-          { type: 0, table: offsets.map { |o| o / 2 }.pack('n*') }
+          { type: 0, table: offsets.map { |o| o >> 1 }.pack('n*') }
         end
       end
 
@@ -52,11 +51,11 @@ module TTFunk
       private
 
       def parse!
-        type = file.header.index_to_loc_format.zero? ? 'n' : 'N'
-        @offsets = read(length, "#{type}*")
-
         if file.header.index_to_loc_format.zero?
-          @offsets.map! { |v| v * 2 }
+          @offsets = read(length, 'n*')
+          @offsets.map! { |v| v << 1 }
+        else
+          @offsets = read(length, 'N*')
         end
       end
     end

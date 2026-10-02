@@ -434,18 +434,22 @@ module TTFunk
           result << os2.vendor_id
 
           new_cmap_table = subset.new_cmap_table[:charmap]
-          code_points = new_cmap_table
-            .keys
-            .select { |k| new_cmap_table[k][:new].positive? }
-            .sort
+          min_cp = nil
+          max_cp = nil
+          new_cmap_table.each do |k, mapping|
+            next unless mapping[:new].positive?
+
+            min_cp = k if min_cp.nil? || k < min_cp
+            max_cp = k if max_cp.nil? || k > max_cp
+          end
 
           # "This value depends on which character sets the font supports.
           # This field cannot represent supplementary character values
           # (codepoints greater than 0xFFFF). Fonts that support
           # supplementary characters should set the value in this field
           # to 0xFFFF."
-          first_char_index = [code_points.first || 0, UNICODE_MAX].min
-          last_char_index = [code_points.last || 0, UNICODE_MAX].min
+          first_char_index = [min_cp || 0, UNICODE_MAX].min
+          last_char_index = [max_cp || 0, UNICODE_MAX].min
 
           result << [
             os2.selection, first_char_index, last_char_index,
@@ -549,8 +553,10 @@ module TTFunk
         end
 
         def avg_weighted_char_width_for(os2, subset)
+          unicode_map = subset.to_unicode_map
+
           # make sure the subset includes the space char
-          unless subset.to_unicode_map[CODEPOINT_SPACE]
+          unless unicode_map[CODEPOINT_SPACE]
             raise SPACE_GLYPH_MISSING_ERROR
           end
 
@@ -565,7 +571,7 @@ module TTFunk
           # the subset
           LOWERCASE_START.upto(LOWERCASE_END) do |lowercase_cp|
             # make sure the subset includes the character
-            next unless subset.to_unicode_map[lowercase_cp]
+            next unless unicode_map[lowercase_cp]
 
             lowercase_gid = os2.file.cmap.unicode.first[lowercase_cp]
             lowercase_hm = os2.file.horizontal_metrics.for(lowercase_gid)
@@ -602,29 +608,25 @@ module TTFunk
       private
 
       def parse!
-        @version = read(2, 'n').first
-
-        @ave_char_width = read_signed(1).first
-        @weight_class, @width_class = read(4, 'nn')
-        @type, @y_subscript_x_size, @y_subscript_y_size, @y_subscript_x_offset,
+        raw = io.read(68)
+        @version, @ave_char_width, @weight_class, @width_class,
+          @type, @y_subscript_x_size, @y_subscript_y_size, @y_subscript_x_offset,
           @y_subscript_y_offset, @y_superscript_x_size, @y_superscript_y_size,
           @y_superscript_x_offset, @y_superscript_y_offset, @y_strikeout_size,
-          @y_strikeout_position, @family_class = read_signed(12)
-        @panose = io.read(10)
+          @y_strikeout_position, @family_class = raw.unpack('ns>nns>12')
 
-        @char_range = BitField.new(BinUtils.stitch_int(read(16, 'N*'), bit_width: 32))
-
-        @vendor_id = io.read(4)
-        @selection, @first_char_index, @last_char_index = read(6, 'n*')
+        @panose = raw.byteslice(32, 10)
+        @char_range = BitField.new(BinUtils.stitch_int(raw.byteslice(42, 16).unpack('N4'), bit_width: 32))
+        @vendor_id = raw.byteslice(58, 4)
+        @selection, @first_char_index, @last_char_index = raw.byteslice(62, 6).unpack('nnn')
 
         if @version.positive?
-          @ascent, @descent, @line_gap = read_signed(3)
-          @win_ascent, @win_descent = read(4, 'nn')
-          @code_page_range = BitField.new(BinUtils.stitch_int(read(8, 'N*'), bit_width: 32))
+          v1_raw = io.read(18)
+          @ascent, @descent, @line_gap, @win_ascent, @win_descent = v1_raw.unpack('s>3nn')
+          @code_page_range = BitField.new(BinUtils.stitch_int(v1_raw.byteslice(10, 8).unpack('N2'), bit_width: 32))
 
           if @version > 1
-            @x_height, @cap_height = read_signed(2)
-            @default_char, @break_char, @max_context = read(6, 'nnn')
+            @x_height, @cap_height, @default_char, @break_char, = io.read(10).unpack('s>2nnn')
 
             # Set this to zero until GSUB/GPOS support has been implemented.
             # This value is calculated via those tables, and should be set to

@@ -58,7 +58,7 @@ module TTFunk
               return entry
             end
 
-            range, entry =
+            _, entry =
               entries.bsearch { |rng, _|
                 if rng.cover?(glyph_id)
                   0
@@ -69,7 +69,7 @@ module TTFunk
                 end
               }
 
-            range.each { |i| range_cache[i] = entry }
+            range_cache[glyph_id] = entry
             entry
           end
         end
@@ -109,7 +109,7 @@ module TTFunk
               result << new_indices.map(&:last).pack('C*')
             else
               result << [RANGE_FORMAT, ranges.size].pack('Cn')
-              ranges.each { |range| result << range.pack('nC') }
+              result << ranges.flatten.pack('nC' * ranges.size)
 
               # "A sentinel GID follows the last range element and serves to
               # delimit the last range in the array. (The sentinel GID is set
@@ -143,7 +143,7 @@ module TTFunk
         end
 
         def parse!
-          @format = read(1, 'C').first
+          @format = io.getbyte
           @length = 1
 
           case format_sym
@@ -152,14 +152,15 @@ module TTFunk
             data = io.read(n_glyphs)
             @length += data.bytesize
             @items_count = data.bytesize
-            @entries = data.bytes
+            @entries = data.unpack('C*')
 
           when :range_format
             # +2 for sentinel GID, +2 for num_ranges
             num_ranges = io.read(2).unpack1('n')
             @length += (num_ranges * RANGE_ENTRY_SIZE) + 4
 
-            ranges = Array.new(num_ranges) { read(RANGE_ENTRY_SIZE, 'nC') }
+            raw_ranges = io.read(num_ranges * RANGE_ENTRY_SIZE).unpack('nC' * num_ranges)
+            ranges = raw_ranges.each_slice(2).to_a
 
             @entries =
               ranges.each_cons(2).map { |first, second|
@@ -175,7 +176,7 @@ module TTFunk
             last_start_gid, last_fd_index = ranges.last
             @entries << [(last_start_gid...(n_glyphs + 1)), last_fd_index]
 
-            @items_count = entries.reduce(0) { |sum, entry| sum + entry.first.size }
+            @items_count = entries.sum { |entry| entry.first.size }
           end
         end
 

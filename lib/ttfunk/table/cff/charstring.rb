@@ -197,47 +197,65 @@ module TTFunk
         end
 
         def rlineto
-          until @stack.empty?
-            @x += @stack.shift
-            @y += @stack.shift
+          i = 0
+          len = @stack.length
+          while i < len
+            @x += @stack[i]
+            @y += @stack[i + 1]
             @path.line_to(@x, @y)
+            i += 2
           end
+          @stack.clear
         end
 
         def hlineto
-          until @stack.empty?
-            @x += @stack.shift
+          i = 0
+          len = @stack.length
+          while i < len
+            @x += @stack[i]
             @path.line_to(@x, @y)
+            i += 1
 
-            break if @stack.empty?
+            break if i >= len
 
-            @y += @stack.shift
+            @y += @stack[i]
             @path.line_to(@x, @y)
+            i += 1
           end
+          @stack.clear
         end
 
         def vlineto
-          until @stack.empty?
-            @y += @stack.shift
+          i = 0
+          len = @stack.length
+          while i < len
+            @y += @stack[i]
             @path.line_to(@x, @y)
+            i += 1
 
-            break if @stack.empty?
+            break if i >= len
 
-            @x += @stack.shift
+            @x += @stack[i]
             @path.line_to(@x, @y)
+            i += 1
           end
+          @stack.clear
         end
 
         def rrcurveto
-          until @stack.empty?
-            c1x = @x + @stack.shift
-            c1y = @y + @stack.shift
-            c2x = c1x + @stack.shift
-            c2y = c1y + @stack.shift
-            @x = c2x + @stack.shift
-            @y = c2y + @stack.shift
+          i = 0
+          len = @stack.length
+          while i < len
+            c1x = @x + @stack[i]
+            c1y = @y + @stack[i + 1]
+            c2x = c1x + @stack[i + 2]
+            c2y = c1y + @stack[i + 3]
+            @x = c2x + @stack[i + 4]
+            @y = c2y + @stack[i + 5]
             @path.curve_to(c1x, c1y, c2x, c2y, @x, @y)
+            i += 6
           end
+          @stack.clear
         end
 
         def callsubr
@@ -278,11 +296,11 @@ module TTFunk
           c2y = c1y + @stack.shift # dy2
           jpx = c2x + @stack.shift # dx3
           jpy = c2y # dy3
-          c3x = jpx + stack.shift # dx4
+          c3x = jpx + @stack.shift # dx4
           c3y = c2y # dy4
-          c4x = c3x + stack.shift # dx5
+          c4x = c3x + @stack.shift # dx5
           c4y = @y # dy5
-          @x = c4x + stack.shift # dx6
+          @x = c4x + @stack.shift # dx6
 
           @path.curve_to(c1x, c1y, c2x, c2y, jpx, jpy)
           @path.curve_to(c3x, c3y, c4x, c4y, @x, @y)

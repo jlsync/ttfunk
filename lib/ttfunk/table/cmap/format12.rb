@@ -46,7 +46,7 @@ module TTFunk
               range_firstglyphs << new_id
               range_lengths << 1
             else
-              range_lengths.push(range_lengths.pop) + 1
+              range_lengths[-1] += 1
             end
             last_code = code
             last_glyph = new_id
@@ -55,13 +55,12 @@ module TTFunk
           subtable = [
             12, 0, 16 + (12 * range_lengths.size), 0, range_lengths.size,
           ].pack('nnNNN')
-          range_lengths.each_with_index do |length, i|
-            firstglyph = range_firstglyphs[i]
+          groups = []
+          range_lengths.each_with_index do |len, i|
             firstcode = range_firstcodes[i]
-            subtable << [
-              firstcode, firstcode + length - 1, firstglyph,
-            ].pack('NNN')
+            groups << firstcode << (firstcode + len - 1) << range_firstglyphs[i]
           end
+          subtable << groups.pack('N*')
 
           { charmap: new_map, subtable: subtable, max_glyph_id: next_id + 1 }
         end

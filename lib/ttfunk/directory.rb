@@ -20,14 +20,19 @@ module TTFunk
       @scaler_type, table_count = io.read(12).unpack('Nn')
 
       @tables = {}
-      table_count.times do
-        tag, checksum, offset, length = io.read(16).unpack('a4N*')
-        @tables[tag] = {
-          tag: tag,
-          checksum: checksum,
-          offset: offset,
-          length: length,
-        }
+      if table_count.positive?
+        raw_tables = io.read(table_count * 16)
+        if raw_tables
+          entries = raw_tables.unpack('a4NNN' * table_count)
+          entries.each_slice(4) do |tag, checksum, table_offset, length|
+            @tables[tag] = {
+              tag: tag,
+              checksum: checksum,
+              offset: table_offset,
+              length: length,
+            }
+          end
+        end
       end
     end
   end

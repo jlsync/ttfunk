@@ -56,6 +56,17 @@ module TTFunk
         {}
       end
 
+      # Reset cached subset state.
+      #
+      # @return [void]
+      def reset_cache!
+        @to_unicode_map = nil
+        @new_cmap_table = nil
+        @glyphs = nil
+        @old_to_new_glyph = nil
+        @new_to_old_glyph = nil
+      end
+
       # Encode this subset into a binary font representation.
       #
       # @param options [Hash]
@@ -96,17 +107,19 @@ module TTFunk
       # @return [Hash{Integer => TTFunk::Table::Cff::Charstring}] if original is
       #   a CFF-based OpenType font
       def collect_glyphs(glyph_ids)
-        collected =
-          glyph_ids.each_with_object({}) do |id, h|
-            h[id] = glyph_for(id)
-          end
+        collected = {}
+        queue = glyph_ids.dup
+        idx = 0
 
-        additional_ids = collected.values
-          .select { |g| g&.compound? }
-          .map(&:glyph_ids)
-          .flatten
+        while idx < queue.length
+          id = queue[idx]
+          idx += 1
+          next if collected.key?(id)
 
-        collected.update(collect_glyphs(additional_ids)) if additional_ids.any?
+          glyph = glyph_for(id)
+          collected[id] = glyph
+          queue.concat(glyph.glyph_ids) if glyph&.compound?
+        end
 
         collected
       end

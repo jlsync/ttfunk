@@ -210,8 +210,9 @@ module TTFunk
     end
 
     def align(data, width)
-      if (data.length % width).positive?
-        data + ("\0" * (width - (data.length % width)))
+      rem = data.bytesize % width
+      if rem.positive?
+        data + ("\0" * (width - rem))
       else
         data
       end

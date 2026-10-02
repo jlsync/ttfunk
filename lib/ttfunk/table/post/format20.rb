@@ -36,10 +36,16 @@ module TTFunk
           @glyph_name_index = read(number_of_glyphs * 2, 'n*')
           @names = []
 
-          strings = StringIO.new(io.read(offset + length - io.pos))
-          until strings.eof?
-            length = strings.read(1).unpack1('C')
-            @names << strings.read(length)
+          raw_strings = io.read(offset + length - io.pos)
+          return unless raw_strings
+
+          pos = 0
+          total_len = raw_strings.bytesize
+          while pos < total_len
+            str_len = raw_strings.getbyte(pos)
+            pos += 1
+            @names << raw_strings.byteslice(pos, str_len)
+            pos += str_len
           end
         end
       end

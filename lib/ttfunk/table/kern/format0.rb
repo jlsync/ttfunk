@@ -21,17 +21,16 @@ module TTFunk
         def initialize(attributes = {})
           @attributes = attributes
 
-          num_pairs, *pairs = attributes.delete(:data).unpack('nx6n*')
+          data = attributes.delete(:data)
+          num_pairs = data.unpack1('n')
+          pair_bytes = data.byteslice(8..)
+          actual_pairs = [num_pairs, pair_bytes ? pair_bytes.bytesize / 6 : 0].min
+          pairs = actual_pairs.positive? ? pair_bytes.unpack('n2s>' * actual_pairs) : []
 
           @pairs = {}
-          num_pairs.times do |i|
-            # sanity check, in case there's a bad length somewhere
-            break if (i * 3) + 2 > pairs.length
-
-            left = pairs[i * 3]
-            right = pairs[(i * 3) + 1]
-            value = to_signed(pairs[(i * 3) + 2])
-            @pairs[[left, right]] = value
+          actual_pairs.times do |i|
+            idx = i * 3
+            @pairs[[pairs[idx], pairs[idx + 1]]] = pairs[idx + 2]
           end
         end
 
@@ -61,14 +60,16 @@ module TTFunk
         def recode(mapping)
           subset = []
           pairs.each do |(left, right), value|
-            if mapping[left] && mapping[right]
-              subset << [mapping[left], mapping[right], value]
+            new_left = mapping[left]
+            new_right = mapping[right]
+            if new_left && new_right
+              subset << new_left << new_right << value
             end
           end
 
           return if subset.empty?
 
-          num_pairs = subset.length
+          num_pairs = subset.length / 3
           # Compute search parameters using bit math (avoids float logs).
           k = [num_pairs, 1].max.bit_length - 1
           search_range = 2 * (1 << k)
@@ -85,12 +86,7 @@ module TTFunk
             range_shift,
           ].pack('n*')
 
-          body = +''
-          subset.each do |l, r, v|
-            body << [l, r, v].pack('n*')
-          end
-
-          header << body
+          header << subset.pack('n*')
         end
       end
     end

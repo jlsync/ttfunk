@@ -37,9 +37,11 @@ module TTFunk
             vorg.default_vert_origin_y, vorg.count,
           ].pack('n*')
 
+          origins_data = []
           vorg.origins.each_pair do |glyph_id, vert_origin_y|
-            table << [glyph_id, vert_origin_y].pack('n*')
+            origins_data << glyph_id << vert_origin_y
           end
+          table << origins_data.pack('n*')
         end
       end
 
@@ -68,13 +70,14 @@ module TTFunk
       private
 
       def parse!
-        @major_version, @minor_version = read(4, 'n*')
-        @default_vert_origin_y = read_signed(1).first
-        @count = io.read(2).unpack1('n')
+        @major_version, @minor_version, @default_vert_origin_y, @count =
+          read(8, 'n2s>n')
 
-        count.times do
-          glyph_id = io.read(2).unpack1('n')
-          origins[glyph_id] = read_signed(1).first
+        if @count.positive?
+          origin_data = read(@count * 4, 'ns>' * @count)
+          origin_data.each_slice(2) do |glyph_id, vert_origin_y|
+            origins[glyph_id] = vert_origin_y
+          end
         end
       end
     end

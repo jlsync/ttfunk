@@ -36,6 +36,7 @@ module TTFunk
       # @return [void]
       def use(character)
         unless @unicodes.key?(character)
+          reset_cache!
           @subset[@next] = character
           @unicodes[character] = @next
           @next += 1
