@@ -49,7 +49,7 @@ Gem::Specification.new do |spec|
     'bug_tracker_uri' => 'https://github.com/prawnpdf/ttfunk/issues',
   }
 
-  spec.required_ruby_version = '>= 2.7'
+  spec.required_ruby_version = '>= 3.3'
   spec.add_development_dependency('bigdecimal', '>= 3.1')
-  spec.add_development_dependency('prawn-dev', '~> 0.6.0')
+  spec.add_development_dependency('prawn-dev', '~> 0.7.0')
 end

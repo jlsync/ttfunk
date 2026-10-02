@@ -21,3 +21,14 @@ Style/Documentation:
   Exclude:
     - examples/**/*.rb
     - spec/**/*.rb
+
+AllCops:
+  TargetRubyVersion: 3.3
+
+# Anonymous argument/block forwarding would rewrite delegating method
+# signatures and detach them from their documented @param names.
+Style/ArgumentsForwarding:
+  Enabled: false
+
+Naming/BlockForwarding:
+  Enabled: false

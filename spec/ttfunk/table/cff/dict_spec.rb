@@ -116,7 +116,7 @@ RSpec.describe TTFunk::Table::Cff::Dict do
     it 'encodes BigDecimal' do
       dict = described_class.new(TestFile.new(StringIO.new('')), 0, 0)
 
-      dict[1] = BigDecimal('42')
+      dict[1] = BigDecimal(42)
 
       expect(dict.encode).to eq("\x1EB\xA0\xFF\x01".b)
     end

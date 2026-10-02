@@ -12,7 +12,7 @@ module TTFunk
         class TooManyOperandsError < StandardError; end
 
         # Single-byte operators.
-        OPERATOR_BZERO = (0..21).freeze
+        OPERATOR_BZERO = (0..21)
         # Bytes indicating an operand.
         OPERAND_BZERO = [28..30, 32..254].freeze
 
@@ -27,10 +27,10 @@ module TTFunk
 
         # Scientific notation operand significand validation regular
         # experession.
-        VALID_SCI_SIGNIFICAND_RE = /\A-?(\.\d+|\d+|\d+\.\d+)\z/.freeze
+        VALID_SCI_SIGNIFICAND_RE = /\A-?(\.\d+|\d+|\d+\.\d+)\z/
 
         # Scientific notation operand exponent validation regular experession.
-        VALID_SCI_EXPONENT_RE = /\A-?\d+\z/.freeze
+        VALID_SCI_EXPONENT_RE = /\A-?\d+\z/
 
         include Enumerable
 
