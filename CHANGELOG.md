@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+
+* Performance of font parsing, subsetting and encoding
+
+  `EncodedString` no longer goes through a `StringIO`, `hmtx` metrics are
+  materialized lazily, CFF indexes whose items are emitted verbatim are
+  encoded without slicing and re-joining every item, the OS/2 Unicode block
+  calculation walks the smaller of the subset and the original `cmap`, and
+  the whole-font checksum is assembled from the per-table checksums instead of
+  unpacking the entire font a second time. The encoded output is unchanged.
+
+  Jason Lee
+
 ### Fixed
 
 * `maxp` table encoding

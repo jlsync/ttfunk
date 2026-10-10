@@ -493,36 +493,98 @@ module TTFunk
           field = BitField.new(0)
           return field unless subset.unicode?
 
-          subset_code_points = Set.new(subset.new_cmap_table[:charmap].keys)
-          original_code_point_groups = group_original_code_points_by_bit(os2)
+          original_code_points = os2.file.cmap.unicode.first.code_map
+          subset_charmap = subset.new_cmap_table[:charmap]
 
-          original_code_point_groups.each do |bit, code_points|
-            next if original_field.off?(bit)
-
-            if code_points.any? { |cp| subset_code_points.include?(cp) }
-              field.on(bit)
+          # Walking the smaller of the two collections keeps this linear. Only
+          # code points present in both the original font and the subset can
+          # turn a bit on. Block bits are deduplicated so that the field only
+          # gets touched once per block.
+          bits =
+            if subset_charmap.length <= original_code_points.length
+              subset_blocks(original_code_points, subset_charmap)
+            else
+              original_blocks(original_code_points, subset_charmap)
             end
-          end
+
+          bits.each_key { |bit| field.on(bit) if original_field.on?(bit) }
 
           field
         end
 
-        def group_original_code_points_by_bit(os2)
-          Hash.new { |h, k| h[k] = [] }.tap do |result|
-            code_points = os2.file.cmap.unicode.first.code_map.keys.sort
-            count = code_points.length
-            i = 0
-            UNICODE_RANGES.each do |r|
-              min = r.min
-              max = r.max
-              bit = UNICODE_BLOCKS[r]
-              i += 1 while i < count && code_points[i] < min
-              while i < count && code_points[i] <= max
-                result[bit] << code_points[i] if bit
-                i += 1
-              end
+        # Unicode block bits for code points shared by the original font and
+        # the subset. Iterates the (smaller) subset.
+        #
+        # @return [Hash{Integer => true}]
+        def subset_blocks(original_code_points, subset_charmap)
+          bits = {}
+
+          subset_charmap.each_key do |code_point|
+            next unless original_code_points.key?(code_point)
+
+            bit = unicode_block_for(code_point)
+            bits[bit] = true if bit
+          end
+
+          bits
+        end
+
+        # Unicode block bits for code points shared by the original font and
+        # the subset. Iterates the (smaller) original cmap.
+        #
+        # @return [Hash{Integer => true}]
+        def original_blocks(original_code_points, subset_charmap)
+          bits = {}
+
+          group_original_code_points_by_bit(original_code_points).each do |bit, code_points|
+            bits[bit] = true if code_points.any? { |cp| subset_charmap.key?(cp) }
+          end
+
+          bits
+        end
+
+        def group_original_code_points_by_bit(original_code_points)
+          result = Hash.new { |hash, key| hash[key] = [] }
+          code_points = original_code_points.keys.sort
+          count = code_points.length
+          i = 0
+
+          UNICODE_RANGES.each do |range|
+            min = range.min
+            max = range.max
+            bit = UNICODE_BLOCKS[range]
+            i += 1 while i < count && code_points[i] < min
+            while i < count && code_points[i] <= max
+              result[bit] << code_points[i] if bit
+              i += 1
             end
           end
+
+          result
+        end
+
+        # Bit index of the OS/2 Unicode block that contains the code point.
+        #
+        # @param code_point [Integer]
+        # @return [Integer, nil]
+        def unicode_block_for(code_point)
+          low = 0
+          high = UNICODE_RANGES.length - 1
+
+          while low <= high
+            mid = (low + high) / 2
+            range = UNICODE_RANGES[mid]
+
+            if code_point < range.min
+              high = mid - 1
+            elsif code_point > range.max
+              low = mid + 1
+            else
+              return UNICODE_BLOCKS[range]
+            end
+          end
+
+          nil
         end
 
         def avg_char_width_for(os2, subset)

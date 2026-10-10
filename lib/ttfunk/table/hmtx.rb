@@ -7,8 +7,25 @@ module TTFunk
     # Horizontal Metrics (`hmtx`) table.
     class Hmtx < Table
       # Glyph horizontal metrics.
+      #
+      # Metrics are materialized lazily: only glyphs that are actually asked
+      # for get a HorizontalMetric instance. Fonts with tens of thousands of
+      # glyphs no longer pay for all of them when just a subset is used.
+      #
       # @return [Array<HorizontalMetric>]
-      attr_reader :metrics
+      def metrics
+        return unless @metrics
+
+        unless @metrics_loaded
+          values = @metric_data.unpack('ns>' * @metrics.length)
+          @metrics.each_index do |i|
+            @metrics[i] ||= HorizontalMetric.new(values[i * 2], values[(i * 2) + 1])
+          end
+          @metrics_loaded = true
+        end
+
+        @metrics
+      end
 
       # Left side bearings.
       # @return [Array<Ingteger>]
@@ -16,7 +33,11 @@ module TTFunk
 
       # Glyph widths.
       # @return [Array<Integer>]
-      attr_reader :widths
+      def widths
+        return unless @metrics
+
+        @widths ||= build_widths
+      end
 
       # Encode table.
       #
@@ -53,12 +74,22 @@ module TTFunk
       # @param glyph_id [Integer]
       # @return [HorizontalMetric]
       def for(glyph_id)
-        @metrics[glyph_id] ||
+        metric = @metrics[glyph_id]
+        return metric if metric
+
+        # Negative IDs are out of spec but used to be tolerated through
+        # Array#[], so keep resolving them the same way.
+        index = glyph_id.negative? ? glyph_id + @metrics.length : glyph_id
+
+        if index >= 0 && index < @metrics.length
+          @metrics[index] ||= metric_at(index)
+        else
           metrics_cache[glyph_id] ||=
             HorizontalMetric.new(
-              @metrics.last.advance_width,
+              @last_advance_width,
               @left_side_bearings[glyph_id - @metrics.length],
             )
+        end
       end
 
       private
@@ -67,25 +98,42 @@ module TTFunk
         @metrics_cache ||= {}
       end
 
+      # Metric for the given (long metric) glyph, read straight from the raw
+      # table data.
+      #
+      # @param index [Integer]
+      # @return [HorizontalMetric]
+      def metric_at(index)
+        value = @metric_data.unpack1('N', offset: index * 4)
+        left_side_bearing = value & 0xffff
+        left_side_bearing -= 0x10000 if left_side_bearing >= 0x8000
+
+        HorizontalMetric.new(value >> 16, left_side_bearing)
+      end
+
+      def build_widths
+        result = Array.new(@metrics.length + @left_side_bearings.length)
+        i = 0
+        metrics.each do |metric|
+          result[i] = metric.advance_width
+          i += 1
+        end
+        result.fill(@last_advance_width, @metrics.length)
+        result
+      end
+
       def parse!
         number_of_metrics = file.horizontal_header.number_of_metrics
-        values = read(number_of_metrics * 4, 'ns>' * number_of_metrics)
-        @metrics =
-          Array.new(number_of_metrics) { |i|
-            HorizontalMetric.new(values[i * 2], values[(i * 2) + 1])
-          }
+        @metric_data = io.read(number_of_metrics * 4)
+        @metrics = Array.new(number_of_metrics)
+        @metrics_loaded = false
 
-        lsb_count = file.maximum_profile.num_glyphs -
-          file.horizontal_header.number_of_metrics
+        if number_of_metrics.positive?
+          @last_advance_width = @metric_data.unpack1('n', offset: (number_of_metrics - 1) * 4)
+        end
+
+        lsb_count = file.maximum_profile.num_glyphs - number_of_metrics
         @left_side_bearings = read_signed(lsb_count)
-
-        total = @metrics.length + @left_side_bearings.length
-        @widths = Array.new(total)
-        # copy metric widths
-        @metrics.length.times { |i| @widths[i] = @metrics[i].advance_width }
-        # fill remaining with last width
-        last = @metrics.last.advance_width
-        @widths.fill(last, @metrics.length)
       end
     end
   end

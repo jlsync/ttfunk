@@ -49,6 +49,11 @@ module TTFunk
         # @param args all arguments are passed to `encode_item` method.
         # @return [TTFunk::EncodedString]
         def encode(*args)
+          # The default #encode_items returns every raw item verbatim and in
+          # order, so the encoded body is just the raw item data. Slicing and
+          # re-joining tens of thousands of items is then pure overhead.
+          return encode_raw_items if method(:encode_items).owner == TTFunk::Table::Cff::Index
+
           new_items = encode_items(*args)
 
           if new_items.empty?
@@ -61,7 +66,9 @@ module TTFunk
 
           offsets_array = [1]
           current_offset = 1
+          plain_strings = true
           new_items.each do |item|
+            plain_strings &&= item.is_a?(String)
             current_offset += item.length
             offsets_array << current_offset
           end
@@ -72,7 +79,15 @@ module TTFunk
             [new_items.length, offset_size].pack('nC'),
             encode_offsets(offsets_array, offset_size),
           )
-          new_items.each { |item| result << item }
+
+          if plain_strings
+            # A single append of the joined items is much cheaper than shoveling
+            # tens of thousands of small strings one by one.
+            result << new_items.join
+          else
+            new_items.each { |item| result << item }
+          end
+
           result
         end
 
@@ -80,6 +95,27 @@ module TTFunk
 
         attr_reader :offsets
         attr_reader :data_reference_offset
+
+        # Encode an index whose items are the raw data, in order.
+        #
+        # @return [TTFunk::EncodedString]
+        def encode_raw_items
+          return [0].pack('n') if items_count.zero?
+
+          if items_count > 0xffff
+            raise Error, 'Too many items in a CFF index'
+          end
+
+          # Raw offsets start at the first item; encoded offsets start at 1.
+          first = offsets[0]
+          offset_size = ((offsets[items_count] - first + 1).bit_length + 7) / 8
+
+          EncodedString.new.concat(
+            [items_count, offset_size].pack('nC'),
+            encode_offsets(offsets, offset_size, 1 - first),
+            @data,
+          )
+        end
 
         def entry_cache
           @entry_cache ||= {}
@@ -114,16 +150,43 @@ module TTFunk
           item(index)
         end
 
-        def encode_offsets(offsets, offset_size)
-          case offset_size
-          when 1
-            offsets.pack('C*')
-          when 2
-            offsets.pack('n*')
-          when 3
-            offsets.flat_map { |offset| [offset >> 16, offset & 0xffff] }.pack('Cn' * offsets.length)
-          when 4
-            offsets.pack('N*')
+        # @param offsets [Array<Integer>]
+        # @param offset_size [Integer] number of bytes per offset
+        # @param shift [Integer] added to every offset before packing
+        # @return [String]
+        def encode_offsets(offsets, offset_size, shift = 0)
+          if offset_size == 3
+            # Offsets are packed as a C/n pair, which needs a flat argument
+            # array. Building it in place avoids an intermediate shifted array
+            # and flat_map's per-item arrays.
+            packed = Array.new(offsets.length * 2)
+            i = 0
+            if shift.zero?
+              offsets.each do |offset|
+                packed[i] = offset >> 16
+                packed[i + 1] = offset & 0xffff
+                i += 2
+              end
+            else
+              offsets.each do |offset|
+                offset += shift
+                packed[i] = offset >> 16
+                packed[i + 1] = offset & 0xffff
+                i += 2
+              end
+            end
+            packed.pack('Cn' * offsets.length)
+          else
+            offsets = offsets.map { |offset| offset + shift } if shift.nonzero?
+
+            case offset_size
+            when 1
+              offsets.pack('C*')
+            when 2
+              offsets.pack('n*')
+            when 4
+              offsets.pack('N*')
+            end
           end
         end
 
