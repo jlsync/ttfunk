@@ -22,6 +22,7 @@ module TTFunk
   class EncodedString
     # @yieldparam [self]
     def initialize
+      @string = +''.b
       yield(self) if block_given?
     end
 
@@ -32,17 +33,17 @@ module TTFunk
     def <<(obj)
       case obj
       when String
-        io << obj
+        @string << obj
       when Placeholder
         add_placeholder(obj)
-        io << ("\0" * obj.length)
+        @string << ("\0" * obj.length)
       when self.class
         # adjust placeholders to be relative to the entire encoded string
         obj.placeholders.each_pair do |_, placeholder|
-          add_placeholder(placeholder.dup, placeholder.position + io.length)
+          add_placeholder(placeholder.dup, placeholder.position + @string.bytesize)
         end
 
-        io << obj.unresolved_string
+        @string << obj.unresolved_string
       end
 
       self
@@ -74,7 +75,7 @@ module TTFunk
     #
     # @return [Integer]
     def length
-      io.length
+      @string.bytesize
     end
 
     # Raw string.
@@ -88,7 +89,7 @@ module TTFunk
           "string contains #{placeholders.size} unresolved placeholder(s)"
       end
 
-      io.string
+      @string
     end
 
     # Raw bytes.
@@ -104,7 +105,7 @@ module TTFunk
     #
     # @return [String]
     def unresolved_string
-      io.string
+      @string
     end
 
     # Resolve placeholder.
@@ -113,15 +114,11 @@ module TTFunk
     # @param value [String]
     # @return [void]
     def resolve_placeholder(name, value)
-      last_pos = io.pos
+      return unless (placeholder = placeholders[name])
 
-      if (placeholder = placeholders[name])
-        io.seek(placeholder.position)
-        io.write(value.byteslice(0, placeholder.length))
-        placeholders.delete(name)
-      end
-    ensure
-      io.seek(last_pos)
+      value = value.byteslice(0, placeholder.length)
+      @string[placeholder.position, value.bytesize] = value
+      placeholders.delete(name)
     end
 
     # Plaholders
@@ -133,7 +130,7 @@ module TTFunk
 
     private
 
-    def add_placeholder(new_placeholder, pos = io.pos)
+    def add_placeholder(new_placeholder, pos = @string.bytesize)
       if placeholders.include?(new_placeholder.name)
         raise DuplicatePlaceholderError,
           "placeholder #{new_placeholder.name} already exists"
@@ -141,10 +138,6 @@ module TTFunk
 
       new_placeholder.position = pos
       placeholders[new_placeholder.name] = new_placeholder
-    end
-
-    def io
-      @io ||= StringIO.new(''.b).binmode
     end
   end
 end

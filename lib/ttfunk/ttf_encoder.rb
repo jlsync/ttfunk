@@ -57,8 +57,12 @@ module TTFunk
 
       # Tables are supposed to be listed in ascending order whereas there is a
       # known optimal order for table data.
+      table_sum = 0
       tables.sort.each do |tag, data|
-        newfont << [tag, checksum(data)].pack('A4N')
+        table_checksum = checksum(data)
+        table_sum += table_checksum
+
+        newfont << [tag, table_checksum].pack('A4N')
         newfont << Placeholder.new(tag, length: 4)
         newfont << [data.length].pack('N')
       end
@@ -71,7 +75,12 @@ module TTFunk
         newfont.align!(4)
       end
 
-      sum = checksum(newfont)
+      # Checksum of the whole font. Unpacking the entire font again just to sum
+      # its words is wasteful; the sum of the offset table plus directory and
+      # of each (already padded) table is equivalent because the checksum is a
+      # plain word-wise sum.
+      header_sum = checksum(newfont.unresolved_string.byteslice(0, 12 + (16 * tables.length)))
+      sum = (header_sum + table_sum) & 0xFFFF_FFFF
       adjustment = 0xB1B0AFBA - sum
       newfont.resolve_placeholder(:checksum, [adjustment].pack('N'))
 

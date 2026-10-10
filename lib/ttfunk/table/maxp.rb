@@ -186,9 +186,11 @@ module TTFunk
               total_contours << stats[:total_contours]
               max_depth << stats[:max_depth]
             else
-              stats = stats_for_simple(maxp, [glyph])
-              total_points << stats[:max_points]
-              total_contours << stats[:max_contours]
+              # Equivalent to aggregating a single-glyph stats_for_simple
+              # result, without allocating the intermediate Max objects and
+              # hash for every component glyph.
+              total_points << glyph.end_point_of_last_contour
+              total_contours << glyph.number_of_contours
             end
           end
 

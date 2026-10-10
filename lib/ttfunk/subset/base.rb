@@ -138,7 +138,7 @@ module TTFunk
 
             next_glyph_id = new_cmap_table[:max_glyph_id]
 
-            glyphs.each_key do |old_id|
+            subset_glyph_ids.each do |old_id|
               unless old_to_new.key?(old_id)
                 old_to_new[old_id] = next_glyph_id
                 next_glyph_id += 1
@@ -157,6 +157,17 @@ module TTFunk
       end
 
       private
+
+      # Original glyph IDs that belong to this subset.
+      #
+      # CFF outlines can't be compound, so their glyph set is exactly the
+      # mapped glyph IDs. Collecting glyphs would parse every charstring only
+      # to produce objects this mapping never looks at.
+      #
+      # @return [Array<Integer>]
+      def subset_glyph_ids
+        original.cff.exists? ? original_glyph_ids : glyphs.keys
+      end
 
       def glyph_for(glyph_id)
         if original.cff.exists?

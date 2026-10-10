@@ -94,7 +94,9 @@ module TTFunk
       def recode(mapping)
         return raw if format == 0x00030000
 
-        table = raw[0, 32]
+        # Only the 32-byte header is reused, so don't pull in the (potentially
+        # large) glyph name data just to throw it away.
+        table = raw_header
         table[0, 4] = [0x00020000].pack('N')
 
         strings = []
@@ -125,6 +127,12 @@ module TTFunk
       end
 
       private
+
+      def raw_header
+        return unless exists?
+
+        parse_from(offset) { io.read(32) }
+      end
 
       def parse!
         @format, @italic_angle, @underline_position, @underline_thickness,

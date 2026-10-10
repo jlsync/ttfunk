@@ -43,7 +43,7 @@ RSpec.describe TTFunk::EncodedString do
     it 'adds padding bytes when adding a placeholder' do
       encoded_string << 'abc'
       encoded_string << TTFunk::Placeholder.new(:foo, length: 3)
-      expect(encoded_string.__send__(:io).string).to eq("abc\0\0\0")
+      expect(encoded_string.unresolved_string).to eq("abc\0\0\0")
     end
   end
 
@@ -52,7 +52,7 @@ RSpec.describe TTFunk::EncodedString do
       encoded_string = described_class.new
       encoded_string.concat("\00", "\01", "\02", TTFunk::Placeholder.new(:foo))
 
-      expect(encoded_string.__send__(:io).string).to eq("\00\01\02\00")
+      expect(encoded_string.unresolved_string).to eq("\00\01\02\00")
       expect(encoded_string.placeholders[:foo]).to_not be_nil
     end
 
