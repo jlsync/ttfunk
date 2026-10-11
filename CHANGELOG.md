@@ -22,6 +22,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
+* `BinUtils.rangify` run splitting on non-consecutive values
+
+  `BinUtils.rangify` only split ranges when the step between consecutive
+  values was strictly greater than 1, failing to split when values decreased
+  or repeated. This produced negative run lengths that wrapped to large
+  unsigned bytes when encoded into CFF charset and encoding tables.
+
+  Jason Lee
+
 * `maxp` table encoding
 
   The table was encoded with the reverse subset indexinx. This resulted in

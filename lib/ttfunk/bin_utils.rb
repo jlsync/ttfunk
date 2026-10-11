@@ -63,7 +63,7 @@ module TTFunk
       values.each_with_index do |val, idx|
         next if idx.zero?
 
-        if val - prev > 1
+        if val - prev != 1
           ranges << [start, prev - start]
           start = val
         end

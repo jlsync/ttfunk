@@ -46,5 +46,23 @@ RSpec.describe TTFunk::BinUtils do
 
       it { is_expected.to eq([[1, 3], [6, 0], [8, 2]]) }
     end
+
+    context 'with an empty array' do
+      let(:values) { [] }
+
+      it { is_expected.to eq([]) }
+    end
+
+    context 'with a single value' do
+      let(:values) { [42] }
+
+      it { is_expected.to eq([[42, 0]]) }
+    end
+
+    context 'with non-monotonic or decreasing values' do
+      let(:values) { [1, 2, 3, 104, 9, 10, 11] }
+
+      it { is_expected.to eq([[1, 2], [104, 0], [9, 2]]) }
+    end
   end
 end
