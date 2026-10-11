@@ -151,12 +151,20 @@ module TTFunk
           # use a predefined charset) so there's nothing to encode
           return '' unless offset
 
+          # The charset is indexed by glyph ID, so there must be exactly one
+          # entry per glyph. Several character codes can map to the same glyph
+          # (the cmap gives them a single GID), and emitting one entry per code
+          # would shift every glyph that follows.
+          old_glyph_id_for = {}
+          charmap.each_value do |mapping|
+            old_glyph_id_for[mapping[:new]] ||= mapping[:old] if mapping[:new].nonzero?
+          end
+
           sids =
-            charmap
-              .values
-              .reject { |mapping| mapping[:new].zero? }
-              .sort_by { |mapping| mapping[:new] }
-              .map { |mapping| sid_for(mapping[:old]) }
+            old_glyph_id_for
+              .keys
+              .sort
+              .map { |glyph_id| sid_for(old_glyph_id_for[glyph_id]) }
 
           ranges = TTFunk::BinUtils.rangify(sids)
           range_max = ranges.map(&:last).max

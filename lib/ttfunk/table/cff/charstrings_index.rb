@@ -26,10 +26,17 @@ module TTFunk
         end
 
         def encode_items(charmap)
-          charmap
-            .reject { |code, mapping| mapping[:new].zero? && !code.zero? }
-            .sort_by { |_code, mapping| mapping[:new] }
-            .map { |(_code, mapping)| item(mapping[:old]) }
+          # CharStrings INDEX entries are indexed by glyph ID, so there must be
+          # exactly one entry per glyph, starting with the implicit .notdef at
+          # GID 0. Codes that share a glyph must not add extra entries, and
+          # subsets whose cmap has no entry for code 0 (Unicode, Unicode8Bit)
+          # still need .notdef.
+          old_glyph_id_for = { 0 => 0 }
+          charmap.each_value do |mapping|
+            old_glyph_id_for[mapping[:new]] ||= mapping[:old] if mapping[:new].nonzero?
+          end
+
+          old_glyph_id_for.keys.sort.map { |glyph_id| item(old_glyph_id_for[glyph_id]) }
         end
 
         def font_dict_for(index)

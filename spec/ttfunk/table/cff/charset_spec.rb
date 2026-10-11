@@ -162,5 +162,22 @@ RSpec.describe TTFunk::Table::Cff::Charset do
         expect(encoded.bytes).to eq([0x02, 0x00, 0x01, 0x03, 0xFF])
       end
     end
+
+    context 'when several codes map to the same glyph' do
+      let(:charmap) do
+        # 0x41 and 0x61 both map to the first subset glyph, which must produce
+        # a single charset entry rather than one entry per code.
+        {
+          0x41 => { old: 5, new: 1 },
+          0x61 => { old: 5, new: 1 },
+          0x42 => { old: 6, new: 2 },
+        }
+      end
+
+      it 'encodes one entry per glyph' do
+        # format (0x01), start SID (0x00, 0x05), rest (0x01)
+        expect(encoded.bytes).to eq([0x01, 0x00, 0x05, 0x01])
+      end
+    end
   end
 end

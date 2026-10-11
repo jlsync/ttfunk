@@ -152,4 +152,59 @@ describe 'subsetting' do # rubocop: disable RSpec/DescribeClass
 
     expect(records).to eq(records.sort)
   end
+
+  describe 'CFF subset tables' do
+    # The charset, encoding and charstrings index are all indexed by glyph ID.
+    # ComicJens and Exo contain charset SIDs that are not monotonic in glyph
+    # order, and AlbertTextBold's cmap maps several codes to the same glyph, so
+    # all three used to disagree with the charstrings index.
+    shared_examples 'a consistent CFF subset' do |font_name|
+      let(:font) { TTFunk::File.open(test_font(font_name, :otf)) }
+      let(:original_top_dict) { font.cff.top_index[0] }
+
+      let(:subset) do
+        TTFunk::Subset::Unicode.new(font).tap do |result|
+          (0x20..0xFF).each { |code_point| result.use(code_point) }
+        end
+      end
+
+      let(:encoded_top_dict) { TTFunk::File.new(subset.encode).cff.top_index[0] }
+      let(:charstrings_index) { encoded_top_dict.charstrings_index }
+
+      it 'starts the charstrings index with .notdef' do
+        expect(charstrings_index[0].raw).to eq(original_top_dict.charstrings_index[0].raw)
+      end
+
+      it 'covers exactly the subset glyphs in the charset' do
+        expect(encoded_top_dict.charset.items_count).to eq(charstrings_index.items_count - 1)
+      end
+
+      it 'covers exactly the subset glyphs in the encoding' do
+        expect(encoded_top_dict.encoding.items_count).to eq(charstrings_index.items_count - 1)
+      end
+
+      it 'maps every subset glyph to its original charstring and name' do
+        glyphs = subset.old_to_new_glyph.reject { |_, new_glyph_id| new_glyph_id.zero? }
+
+        subset_values =
+          glyphs.map { |_, new_glyph_id|
+            [charstrings_index[new_glyph_id].raw, encoded_top_dict.charset[new_glyph_id]]
+          }
+
+        original_values =
+          glyphs.map { |old_glyph_id, _|
+            [
+              original_top_dict.charstrings_index[old_glyph_id].raw,
+              original_top_dict.charset[old_glyph_id],
+            ]
+          }
+
+        expect(subset_values).to eq(original_values)
+      end
+    end
+
+    it_behaves_like 'a consistent CFF subset', 'ComicJens-Regular'
+    it_behaves_like 'a consistent CFF subset', 'Exo-Regular'
+    it_behaves_like 'a consistent CFF subset', 'AlbertTextBold'
+  end
 end

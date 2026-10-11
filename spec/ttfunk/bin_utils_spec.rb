@@ -64,5 +64,31 @@ RSpec.describe TTFunk::BinUtils do
 
       it { is_expected.to eq([[1, 2], [104, 0], [9, 2]]) }
     end
+
+    context 'with duplicate values' do
+      let(:values) { [1, 1, 2] }
+
+      it { is_expected.to eq([[1, 0], [1, 1]]) }
+    end
+
+    context 'with values in descending order' do
+      let(:values) { [3, 2, 1] }
+
+      it { is_expected.to eq([[3, 0], [2, 0], [1, 0]]) }
+    end
+
+    it 'returns only non-negative lengths that cover every value' do
+      inputs = [[1], [1, 1], [1, 1, 2], [3, 2, 1], [5, 5, 5, 6], [1, 2, 3, 104, 9, 10, 11]]
+
+      coverage =
+        inputs.map { |values|
+          ranges = described_class.rangify(values)
+
+          [ranges.map(&:last).min, ranges.sum { |(_, length)| length + 1 } - values.size]
+        }
+
+      expect(coverage.map(&:first)).to all(be >= 0)
+      expect(coverage.map(&:last)).to all(be_zero)
+    end
   end
 end

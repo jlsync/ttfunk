@@ -124,11 +124,18 @@ module TTFunk
 
           return encode_supplemental(charmap) if supplemental?
 
-          codes =
-            charmap
-              .reject { |_code, mapping| mapping[:new].zero? }
-              .sort_by { |_code, mapping| mapping[:new] }
-              .map { |(code, _m)| code }
+          # Encoding entries are indexed by glyph ID too, so emit exactly one
+          # code per glyph. When several codes map to the same glyph only the
+          # lowest one can be represented, since the encoding maps GID to a
+          # single code.
+          code_for_glyph = {}
+          charmap.each do |code, mapping|
+            next if mapping[:new].zero?
+
+            code_for_glyph[mapping[:new]] ||= code
+          end
+
+          codes = code_for_glyph.keys.sort.map { |glyph_id| code_for_glyph[glyph_id] }
 
           ranges = TTFunk::BinUtils.rangify(codes)
 
