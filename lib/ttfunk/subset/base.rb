@@ -131,10 +131,8 @@ module TTFunk
         @old_to_new_glyph ||=
           begin
             charmap = new_cmap_table[:charmap]
-            old_to_new =
-              charmap.each_with_object(0 => 0) do |(_, ids), map|
-                map[ids[:old]] = ids[:new]
-              end
+            old_to_new = { 0 => 0 }
+            charmap.each_value { |ids| old_to_new[ids[:old]] = ids[:new] }
 
             next_glyph_id = new_cmap_table[:max_glyph_id]
 

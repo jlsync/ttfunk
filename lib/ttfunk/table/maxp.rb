@@ -89,7 +89,7 @@ module TTFunk
             table << [maxp.version, num_glyphs].pack('Nn')
 
             if maxp.version == 0x10000
-              stats = stats_for(maxp, glyphs_from_ids(maxp, new2old_glyph.values))
+              stats = stats_for(maxp, new2old_glyph.values)
 
               table << [
                 stats[:max_points],
@@ -114,91 +114,84 @@ module TTFunk
 
         private
 
-        def glyphs_from_ids(maxp, glyph_ids)
-          glyph_ids.each_with_object([]) do |glyph_id, ret|
-            if (glyph = maxp.file.glyph_outlines.for(glyph_id))
-              ret << glyph
-            end
-          end
-        end
+        # Maximum profile statistics for the given glyphs.
+        #
+        # @param maxp [TTFunk::Table::Maxp]
+        # @param glyph_ids [Array<Integer>] glyph IDs in the original font.
+        # @return [Hash{Symbol => Integer}]
+        def stats_for(maxp, glyph_ids)
+          stats = {
+            max_points: 0,
+            max_contours: 0,
+            max_component_points: 0,
+            max_component_contours: 0,
+            max_component_elements: 0,
+            max_component_depth: 0,
+            max_size_of_instructions: 0,
+          }
 
-        def stats_for(maxp, glyphs)
-          stats_for_simple(maxp, glyphs)
-            .merge(stats_for_compound(maxp, glyphs))
-            .transform_values { |agg| agg.value_or(0) }
-        end
+          glyph_ids.each do |glyph_id|
+            glyph = maxp.file.glyph_outlines.for(glyph_id)
+            next unless glyph
 
-        def stats_for_simple(_maxp, glyphs)
-          max_component_elements = Max.new
-          max_points = Max.new
-          max_contours = Max.new
-          max_size_of_instructions = Max.new
-
-          glyphs.each do |glyph|
             if glyph.compound?
-              max_component_elements << glyph.glyph_ids.size
+              component_elements = glyph.glyph_ids.size
+              stats[:max_component_elements] = component_elements if component_elements > stats[:max_component_elements]
+
+              points, contours, depth = compound_totals(maxp, glyph, 1)
+
+              stats[:max_component_points] = points if points > stats[:max_component_points]
+              stats[:max_component_contours] = contours if contours > stats[:max_component_contours]
+              stats[:max_component_depth] = depth if depth > stats[:max_component_depth]
             else
-              max_points << glyph.end_point_of_last_contour
-              max_contours << glyph.number_of_contours
-              max_size_of_instructions << glyph.instruction_length
+              points = glyph.end_point_of_last_contour
+              stats[:max_points] = points if points > stats[:max_points]
+
+              contours = glyph.number_of_contours
+              stats[:max_contours] = contours if contours > stats[:max_contours]
+
+              instructions = glyph.instruction_length
+              if instructions > stats[:max_size_of_instructions]
+                stats[:max_size_of_instructions] = instructions
+              end
             end
           end
 
-          {
-            max_component_elements: max_component_elements,
-            max_points: max_points,
-            max_contours: max_contours,
-            max_size_of_instructions: max_size_of_instructions,
-          }
+          stats
         end
 
-        def stats_for_compound(maxp, glyphs)
-          max_component_points = Max.new
-          max_component_depth = Max.new
-          max_component_contours = Max.new
+        # Totals for a composite glyph, aggregated over every component
+        # recursively.
+        #
+        # @param maxp [TTFunk::Table::Maxp]
+        # @param glyph [TTFunk::Table::Glyf::Compound]
+        # @param depth [Integer] nesting depth of this glyph's components. The
+        #   components of a composite glyph are at least one level deep, and a
+        #   nested composite adds another level.
+        # @return [Array(Integer, Integer, Integer)] total points, total
+        #   contours and maximum nesting depth.
+        def compound_totals(maxp, glyph, depth)
+          total_points = 0
+          total_contours = 0
+          max_depth = depth
 
-          glyphs.each do |glyph|
-            next unless glyph.compound?
+          glyph.glyph_ids.each do |component_id|
+            component = maxp.file.glyph_outlines.for(component_id)
+            next unless component
 
-            stats = totals_for_compound(maxp, [glyph], 0)
-            max_component_points << stats[:total_points]
-            max_component_depth << stats[:max_depth]
-            max_component_contours << stats[:total_contours]
-          end
+            if component.compound?
+              points, contours, component_depth = compound_totals(maxp, component, depth + 1)
 
-          {
-            max_component_points: max_component_points,
-            max_component_depth: max_component_depth,
-            max_component_contours: max_component_contours,
-          }
-        end
-
-        def totals_for_compound(maxp, glyphs, depth)
-          total_points = Sum.new
-          total_contours = Sum.new
-          max_depth = Max.new(depth)
-
-          glyphs.each do |glyph|
-            if glyph.compound?
-              stats = totals_for_compound(maxp, glyphs_from_ids(maxp, glyph.glyph_ids), depth + 1)
-
-              total_points << stats[:total_points]
-              total_contours << stats[:total_contours]
-              max_depth << stats[:max_depth]
+              total_points += points
+              total_contours += contours
+              max_depth = component_depth if component_depth > max_depth
             else
-              # Equivalent to aggregating a single-glyph stats_for_simple
-              # result, without allocating the intermediate Max objects and
-              # hash for every component glyph.
-              total_points << glyph.end_point_of_last_contour
-              total_contours << glyph.number_of_contours
+              total_points += component.end_point_of_last_contour
+              total_contours += component.number_of_contours
             end
           end
 
-          {
-            total_points: total_points,
-            total_contours: total_contours,
-            max_depth: max_depth,
-          }
+          [total_points, total_contours, max_depth]
         end
       end
 

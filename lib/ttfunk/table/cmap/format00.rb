@@ -33,7 +33,8 @@ module TTFunk
           glyph_map = { 0 => 0 }
 
           new_map = {}
-          charmap.sort.each do |code, old_gid|
+          charmap.keys.sort.each do |code|
+            old_gid = charmap[code]
             glyph_map[old_gid] ||= next_id += 1
             new_id = glyph_map[old_gid]
             new_map[code] = { old: old_gid, new: new_id }

@@ -102,7 +102,15 @@ module TTFunk
           offset = 10 # 2 bytes for each of num-contours, min x/y, max x/y
 
           loop do
-            flags, glyph_id = @raw[offset, 4].unpack('n*')
+            # Read the component record straight out of the glyph data. Data
+            # that is too short for a whole record keeps the historical
+            # behaviour of the slice-and-unpack form.
+            flags, glyph_id =
+              if offset + 4 <= @raw.bytesize
+                @raw.unpack('n2', offset: offset)
+              else
+                @raw[offset, 4].unpack('n*')
+              end
             @glyph_ids << glyph_id
             @glyph_id_offsets << (offset + 2)
 

@@ -106,8 +106,8 @@ module TTFunk
         table << [count].pack('n')
 
         indices = []
-        mapping.sort.each do |_new_id, old_id|
-          post_glyph = glyph_for(old_id)
+        mapping.keys.sort.each do |new_id|
+          post_glyph = glyph_for(mapping[new_id])
           position = Format10::POSTSCRIPT_GLYPHS_INDEX[post_glyph]
           if position
             indices << position

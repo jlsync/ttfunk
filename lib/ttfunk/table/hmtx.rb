@@ -17,10 +17,26 @@ module TTFunk
         return unless @metrics
 
         unless @metrics_loaded
-          values = @metric_data.unpack('ns>' * @metrics.length)
-          @metrics.each_index do |i|
-            @metrics[i] ||= HorizontalMetric.new(values[i * 2], values[(i * 2) + 1])
+          # Unpacking the metrics as whole words is cheaper than unpacking both
+          # fields separately.
+          words = @metric_data.unpack('N*')
+
+          if words.length == @metrics.length
+            count = @metrics.length
+            i = 0
+            while i < count
+              @metrics[i] ||= metric_from_word(words[i])
+              i += 1
+            end
+          else
+            # Truncated table: fall back to the per-field unpack, which leaves
+            # missing fields as nil instead of raising.
+            values = @metric_data.unpack('ns>' * @metrics.length)
+            @metrics.each_index do |i|
+              @metrics[i] ||= HorizontalMetric.new(values[i * 2], values[(i * 2) + 1])
+            end
           end
+
           @metrics_loaded = true
         end
 
@@ -98,27 +114,61 @@ module TTFunk
         @metrics_cache ||= {}
       end
 
+      # Build a horizontal metric out of a raw metric word.
+      #
+      # @param word [Integer]
+      # @return [HorizontalMetric]
+      def metric_from_word(word)
+        left_side_bearing = word & 0xffff
+        left_side_bearing -= 0x10000 if left_side_bearing >= 0x8000
+
+        HorizontalMetric.new(word >> 16, left_side_bearing)
+      end
+
       # Metric for the given (long metric) glyph, read straight from the raw
       # table data.
       #
       # @param index [Integer]
       # @return [HorizontalMetric]
       def metric_at(index)
-        value = @metric_data.unpack1('N', offset: index * 4)
-        left_side_bearing = value & 0xffff
-        left_side_bearing -= 0x10000 if left_side_bearing >= 0x8000
-
-        HorizontalMetric.new(value >> 16, left_side_bearing)
+        metric_from_word(@metric_data.unpack1('N', offset: index * 4))
       end
 
       def build_widths
-        result = Array.new(@metrics.length + @left_side_bearings.length)
+        count = @metrics.length
+        result = Array.new(count + @left_side_bearings.length)
         i = 0
-        metrics.each do |metric|
-          result[i] = metric.advance_width
-          i += 1
+
+        if @metrics_loaded || @metrics.any?
+          # At least one metric has been materialized, so a caller may have
+          # adjusted it. Build the widths from the metrics, exactly as before.
+          metrics.each do |metric|
+            result[i] = metric.advance_width
+            i += 1
+          end
+        else
+          # An advance width is the high half of the 4-byte big-endian metric
+          # word, so widths can be read straight out of the table data.
+          # Going through #metrics would allocate a HorizontalMetric for
+          # every glyph in the font (tens of thousands for large fonts) only
+          # to copy one integer out of each.
+          words = @metric_data.unpack('N*')
+
+          if words.length == count
+            while i < count
+              result[i] = words[i] >> 16
+              i += 1
+            end
+          else
+            # Truncated table: preserve the historical nil-tolerant result.
+            metrics.each do |metric|
+              result[i] = metric.advance_width
+              i += 1
+            end
+          end
         end
-        result.fill(@last_advance_width, @metrics.length)
+
+        result.fill(@last_advance_width, count)
         result
       end
 

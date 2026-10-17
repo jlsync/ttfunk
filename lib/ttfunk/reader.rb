@@ -23,10 +23,11 @@ module TTFunk
     end
 
     def parse_from(position)
-      saved = io.pos
-      io.pos = position
+      stream = io
+      saved = stream.pos
+      stream.pos = position
       result = yield(position)
-      io.pos = saved
+      stream.pos = saved
       result
     end
 
