@@ -20,6 +20,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
   Jason Lee
 
+* More performance of font parsing, subsetting and encoding
+
+  `hmtx#widths` reads advance widths straight from the table instead of
+  materializing a `HorizontalMetric` for every glyph in the font, and
+  `hmtx#metrics` unpacks one word per metric instead of two fields. CFF
+  charset encoding resolves the SIDs of all glyphs in a single pass over the
+  charset ranges instead of walking them once per glyph, `maxp` composite
+  totals are aggregated without the intermediate hashes and accumulator
+  objects, the OS/2 Unicode block lookup binary searches a flat array instead
+  of `Range` objects, and sorting a glyph mapping's keys rather than
+  `[key, value]` pairs speeds up `glyf` and `post` encoding. Table checksums
+  no longer copy a table to pad it, and glyph parsing avoids several
+  substring and `unpack` allocations. The encoded output is unchanged.
+
+  Jason Lee
+
 ### Fixed
 
 * `BinUtils.rangify` run splitting on non-consecutive values

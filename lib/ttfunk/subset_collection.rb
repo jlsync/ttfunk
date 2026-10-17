@@ -67,6 +67,7 @@ module TTFunk
     def encode(characters)
       parts = []
       current_subset = 0
+      part = nil
 
       characters.each do |char|
         starting_subset = current_subset
@@ -78,10 +79,11 @@ module TTFunk
         end
 
         encoded = @subsets[current_subset].from_unicode(char)
-        if parts.empty? || parts.last[0] != current_subset
-          parts << [current_subset, encoded.chr(Encoding::BINARY)]
+        if part.nil? || part[0] != current_subset
+          part = [current_subset, encoded.chr(Encoding::BINARY)]
+          parts << part
         else
-          parts.last[1] << encoded
+          part[1] << encoded
         end
       end
 

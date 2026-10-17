@@ -211,20 +211,30 @@ module TTFunk
     end
 
     def checksum(data)
-      align(raw(data), 4).unpack('N*').sum & 0xFFFF_FFFF
+      # Tables are checksummed as a word-wise sum of their data padded with
+      # zeros to a whole number of words. Unpacking the data as-is covers
+      # every whole word, so only the trailing bytes have to be folded in by
+      # hand -- which avoids copying the table just to pad it.
+      str = raw(data)
+      sum = str.unpack('N*').sum
+
+      case str.bytesize & 3
+      when 3
+        sum += (str.getbyte(str.bytesize - 3) << 24) |
+          (str.getbyte(str.bytesize - 2) << 16) |
+          (str.getbyte(str.bytesize - 1) << 8)
+      when 2
+        sum += (str.getbyte(str.bytesize - 2) << 24) |
+          (str.getbyte(str.bytesize - 1) << 16)
+      when 1
+        sum += str.getbyte(str.bytesize - 1) << 24
+      end
+
+      sum & 0xFFFF_FFFF
     end
 
     def raw(data)
       data.respond_to?(:unresolved_string) ? data.unresolved_string : data
-    end
-
-    def align(data, width)
-      rem = data.bytesize % width
-      if rem.positive?
-        data + ("\0" * (width - rem))
-      else
-        data
-      end
     end
   end
 end

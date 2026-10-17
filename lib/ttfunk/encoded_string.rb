@@ -116,7 +116,10 @@ module TTFunk
     def resolve_placeholder(name, value)
       return unless (placeholder = placeholders[name])
 
-      value = value.byteslice(0, placeholder.length)
+      if value.bytesize > placeholder.length
+        value = value.byteslice(0, placeholder.length)
+      end
+
       @string[placeholder.position, value.bytesize] = value
       placeholders.delete(name)
     end

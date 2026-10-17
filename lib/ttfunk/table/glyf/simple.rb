@@ -58,8 +58,14 @@ module TTFunk
           endpoints_len = number_of_contours * 2
           @end_points_of_contours = raw.byteslice(10, endpoints_len).unpack('n*')
           offset = 10 + endpoints_len
-          @instruction_length = raw.byteslice(offset, 2).unpack1('n')
-          @instructions = raw.byteslice(offset + 2, instruction_length).unpack('C*')
+          @instruction_length =
+            if offset + 2 <= raw.bytesize
+              raw.unpack1('n', offset: offset)
+            else
+              # Data too short for the field keeps the historical result.
+              raw.byteslice(offset, 2).unpack1('n')
+            end
+          @instructions = raw.byteslice(offset + 2, instruction_length).bytes
         end
 
         # Is this glyph compound?

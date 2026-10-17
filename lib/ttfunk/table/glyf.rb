@@ -19,8 +19,10 @@ module TTFunk
       def self.encode(glyphs, new_to_old, old_to_new)
         result = { table: +'', offsets: [] }
 
-        new_to_old.sort.each do |_new_id, old_id|
-          glyph = glyphs[old_id]
+        # Sorting the keys and looking the old glyph IDs up costs a fraction
+        # of sorting [key, value] pairs.
+        new_to_old.keys.sort.each do |new_id|
+          glyph = glyphs[new_to_old[new_id]]
           result[:offsets] << result[:table].bytesize
           result[:table] << glyph.recode(old_to_new) if glyph
         end
@@ -49,10 +51,13 @@ module TTFunk
 
         parse_from(offset + index) do
           raw = io.read(size)
-          number_of_contours = raw.unpack1('s>')
+          # A negative contour count marks a compound glyph, and the only
+          # negative value the format defines is -1. Comparing the two bytes
+          # avoids unpacking a short for every glyph.
+          composite = raw.getbyte(0) == 0xFF && raw.getbyte(1) == 0xFF
 
           @cache[glyph_id] =
-            if number_of_contours == -1
+            if composite
               Compound.new(glyph_id, raw)
             else
               Simple.new(glyph_id, raw)

@@ -359,6 +359,13 @@ module TTFunk
       # Unicode block ranges.
       UNICODE_RANGES = UNICODE_BLOCKS.keys.sort_by(&:max).freeze
 
+      # The same ranges flattened to `[min, max, bit]` entries. Looking the
+      # bounds up in an array avoids a Range method call and a Range-keyed
+      # hash lookup at every step of a binary search.
+      UNICODE_LOOKUP = UNICODE_RANGES.map { |range|
+        [range.min, range.max, UNICODE_BLOCKS[range]].freeze
+      }.freeze
+
       # Start chracter for average character width calculation.
       LOWERCASE_START = 'a'.ord
 
@@ -549,10 +556,7 @@ module TTFunk
           count = code_points.length
           i = 0
 
-          UNICODE_RANGES.each do |range|
-            min = range.min
-            max = range.max
-            bit = UNICODE_BLOCKS[range]
+          UNICODE_LOOKUP.each do |min, max, bit|
             i += 1 while i < count && code_points[i] < min
             while i < count && code_points[i] <= max
               result[bit] << code_points[i] if bit
@@ -569,18 +573,18 @@ module TTFunk
         # @return [Integer, nil]
         def unicode_block_for(code_point)
           low = 0
-          high = UNICODE_RANGES.length - 1
+          high = UNICODE_LOOKUP.length - 1
 
           while low <= high
             mid = (low + high) / 2
-            range = UNICODE_RANGES[mid]
+            min, max, bit = UNICODE_LOOKUP[mid]
 
-            if code_point < range.min
+            if code_point < min
               high = mid - 1
-            elsif code_point > range.max
+            elsif code_point > max
               low = mid + 1
             else
-              return UNICODE_BLOCKS[range]
+              return bit
             end
           end
 

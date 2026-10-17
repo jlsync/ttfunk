@@ -160,11 +160,7 @@ module TTFunk
             old_glyph_id_for[mapping[:new]] ||= mapping[:old] if mapping[:new].nonzero?
           end
 
-          sids =
-            old_glyph_id_for
-              .keys
-              .sort
-              .map { |glyph_id| sid_for(old_glyph_id_for[glyph_id]) }
+          sids = sids_for(old_glyph_id_for)
 
           ranges = TTFunk::BinUtils.rangify(sids)
           range_max = ranges.map(&:last).max
@@ -197,6 +193,71 @@ module TTFunk
         end
 
         private
+
+        # SIDs for every mapped glyph, ordered by the glyph ID in the subset.
+        #
+        # @param old_glyph_id_for [Hash{Integer => Integer}] keys are glyph IDs
+        #   in the subset, values are glyph IDs in the original font.
+        # @return [Array<Integer>]
+        def sids_for(old_glyph_id_for)
+          if format_sym == :array_format
+            # Array charsets already index SIDs by glyph ID.
+            return old_glyph_id_for.keys.sort.map { |new_id| sid_for(old_glyph_id_for[new_id]) }
+          end
+
+          # Range charsets have to be walked to work out a SID, so resolve
+          # every glyph in a single pass over the ranges. Subset glyph IDs are
+          # assigned in character code order while original glyph IDs are not
+          # necessarily in the same order, so the lookup runs in original glyph
+          # ID order and the result is put back into subset glyph ID order.
+          ordered = old_glyph_id_for.to_a.sort_by { |(_new_id, old_id)| old_id }
+          sids = sids_for_sorted_glyph_ids(ordered.map { |(_new_id, old_id)| old_id })
+
+          sid_for_new_id = {}
+          ordered.each_with_index { |(new_id, _old_id), i| sid_for_new_id[new_id] = sids[i] }
+
+          old_glyph_id_for.keys.sort.map { |new_id| sid_for_new_id[new_id] }
+        end
+
+        # SIDs for a sorted, unique list of glyph IDs.
+        #
+        # Walking the ranges once for the whole list instead of once per glyph
+        # turns a range charset lookup from O(glyphs * ranges) into
+        # O(glyphs + ranges).
+        #
+        # @param glyph_ids [Array<Integer>] ascending, unique glyph IDs.
+        # @return [Array<Integer>]
+        def sids_for_sorted_glyph_ids(glyph_ids)
+          sids = Array.new(glyph_ids.length)
+          entry_index = 0
+          range = entries[0]
+          covered = 0 # glyphs covered by the ranges before the current one
+
+          glyph_ids.each_with_index do |glyph_id, i|
+            # The implicit .notdef glyph is not part of the encoded ranges.
+            if glyph_id.zero?
+              sids[i] = 0
+              next
+            end
+
+            while range && glyph_id > covered + range.size
+              covered += range.size
+              entry_index += 1
+              range = entries[entry_index]
+            end
+
+            # Glyph IDs past the last range keep the historical result of
+            # walking off the end of the range list.
+            sids[i] =
+              if range
+                (range.first + glyph_id - covered) - 1
+              else
+                sid_for(glyph_id)
+              end
+          end
+
+          sids
+        end
 
         def sid_for(glyph_id)
           return 0 if glyph_id.zero?
