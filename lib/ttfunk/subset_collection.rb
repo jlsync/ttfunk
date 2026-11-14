@@ -33,25 +33,7 @@ module TTFunk
     #   points
     # @return [void]
     def use(characters)
-      characters.each do |char|
-        covered = false
-        i = 0
-        length = @subsets.length
-        while i < length
-          subset = @subsets[i]
-          if subset.covers?(char)
-            subset.use(char)
-            covered = true
-            break
-          end
-          i += 1
-        end
-
-        unless covered
-          @subsets << Subset.for(@original, :unicode_8bit)
-          @subsets.last.use(char)
-        end
-      end
+      characters.each { |char| use_char(char) }
     end
 
     # Encode characters into subset-character pairs.
@@ -75,7 +57,7 @@ module TTFunk
         # after checking every existing subset for it.
         until @subsets[current_subset].includes?(char)
           current_subset = (current_subset + 1) % @subsets.length
-          use([char]) if current_subset == starting_subset
+          use_char(char) if current_subset == starting_subset
         end
 
         encoded = @subsets[current_subset].from_unicode(char)
@@ -88,6 +70,24 @@ module TTFunk
       end
 
       parts
+    end
+
+    private
+
+    def use_char(char)
+      i = 0
+      length = @subsets.length
+      while i < length
+        subset = @subsets[i]
+        if subset.covers?(char)
+          subset.use(char)
+          return
+        end
+        i += 1
+      end
+
+      @subsets << Subset.for(@original, :unicode_8bit)
+      @subsets.last.use(char)
     end
   end
 end

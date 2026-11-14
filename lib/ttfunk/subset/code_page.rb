@@ -46,6 +46,8 @@ module TTFunk
         super(original)
         @code_page = code_page
         @encoding = encoding
+        @ascii_compatible =
+          (encoding.is_a?(::Encoding) ? encoding : ::Encoding.find(encoding)).ascii_compatible?
         @subset = Array.new(256)
         @from_unicode_cache = {}
         use(space_char_code)
@@ -66,8 +68,11 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [void]
       def use(character)
-        reset_cache!
-        @subset[from_unicode(character)] = character
+        code = from_unicode(character)
+        unless @subset[code]
+          reset_cache!
+          @subset[code] = character
+        end
       end
 
       # Can this subset include the character? This depends on the encoding used
@@ -93,6 +98,10 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [Integer, nil]
       def from_unicode(character)
+        if @ascii_compatible && character.is_a?(Integer) && character >= 0 && character < 128
+          return character
+        end
+
         cached = @from_unicode_cache[character]
         return cached if cached
         return if @from_unicode_cache.key?(character)

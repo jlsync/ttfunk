@@ -35,7 +35,7 @@ module TTFunk
             each do |operator, operands|
               case OPERATOR_CODES[operator]
               when :private
-                result << encode_private
+                append_private_placeholders(result)
               else
                 operands.each { |operand| result << encode_operand(operand) }
               end
@@ -79,11 +79,9 @@ module TTFunk
 
         private
 
-        def encode_private
-          EncodedString.new do |result|
-            result << Placeholder.new(:"private_length_#{@table_offset}", length: PLACEHOLDER_LENGTH)
-            result << Placeholder.new(:"private_offset_#{@table_offset}", length: PLACEHOLDER_LENGTH)
-          end
+        def append_private_placeholders(result)
+          result << Placeholder.new(:"private_length_#{@table_offset}", length: PLACEHOLDER_LENGTH)
+          result << Placeholder.new(:"private_offset_#{@table_offset}", length: PLACEHOLDER_LENGTH)
         end
       end
     end

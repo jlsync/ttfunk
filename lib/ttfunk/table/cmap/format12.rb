@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'subtable'
+
 module TTFunk
   class Table
     class Cmap
@@ -7,13 +9,7 @@ module TTFunk
       #
       # This module conditionally extends {TTFunk::Table::Cmap::Subtable}.
       module Format12
-        # Language.
-        # @return [Integer]
-        attr_reader :language
-
-        # Code map.
-        # @return [Hash{Integer => Integer}]
-        attr_reader :code_map
+        include SupportedFormat
 
         # Encode the encoding record to format 12.
         #
@@ -66,21 +62,6 @@ module TTFunk
           { charmap: new_map, subtable: subtable, max_glyph_id: next_id + 1 }
         end
 
-        # Get glyph ID for character code.
-        #
-        # @param code [Integer] character code.
-        # @return [Integer] glyph ID.
-        def [](code)
-          @code_map[code] || 0
-        end
-
-        # Is this encoding record format supported?
-        #
-        # @return [true]
-        def supported?
-          true
-        end
-
         private
 
         def parse_cmap!
@@ -91,12 +72,18 @@ module TTFunk
           end
           @code_map = {}
           groups = read(groupcount * 12, 'N*')
-          groupcount.times do |i|
-            startchar, endchar, startglyph = groups[i * 3, 3]
-            glyph_delta = startglyph - startchar
-            startchar.upto(endchar) do |code|
+          i = 0
+          limit = groupcount * 3
+          while i < limit
+            startchar = groups[i]
+            endchar = groups[i + 1]
+            glyph_delta = groups[i + 2] - startchar
+            code = startchar
+            while code <= endchar
               @code_map[code] = code + glyph_delta
+              code += 1
             end
+            i += 3
           end
         end
       end

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'subtable'
+
 module TTFunk
   class Table
     class Cmap
@@ -7,13 +9,7 @@ module TTFunk
       #
       # This module conditionally extends {TTFunk::Table::Cmap::Subtable}.
       module Format10
-        # Language.
-        # @return [Integer]
-        attr_reader :language
-
-        # Code map.
-        # @return [Hash{Integer => Integer}]
-        attr_reader :code_map
+        include SupportedFormat
 
         # Encode the encoding record to format 10.
         #
@@ -51,21 +47,6 @@ module TTFunk
           ].pack('nnNNNN') << glyph_indexes.pack('N*')
 
           { charmap: new_map, subtable: subtable, max_glyph_id: next_id + 1 }
-        end
-
-        # Get glyph ID for character code.
-        #
-        # @param code [Integer] character code.
-        # @return [Integer] glyph ID.
-        def [](code)
-          @code_map[code] || 0
-        end
-
-        # Is this encoding record format supported?
-        #
-        # @return [true]
-        def supported?
-          true
         end
 
         private
