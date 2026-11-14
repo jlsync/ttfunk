@@ -26,9 +26,9 @@ module TTFunk
       stream = io
       saved = stream.pos
       stream.pos = position
-      result = yield(position)
-      stream.pos = saved
-      result
+      yield(position)
+    ensure
+      stream.pos = saved if stream && saved
     end
 
     # For debugging purposes

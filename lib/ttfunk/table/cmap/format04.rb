@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'subtable'
+
 module TTFunk
   class Table
     class Cmap
@@ -7,13 +9,7 @@ module TTFunk
       #
       # This module conditionally extends {TTFunk::Table::Cmap::Subtable}.
       module Format04
-        # Language.
-        # @return [Integer]
-        attr_reader :language
-
-        # Code map.
-        # @return [Hash{Integer => Integer}]
-        attr_reader :code_map
+        include SupportedFormat
 
         # Encode the encoding record to format 4.
         #
@@ -108,31 +104,16 @@ module TTFunk
           { charmap: new_map, subtable: subtable, max_glyph_id: next_id + 1 }
         end
 
-        # Get glyph ID for character code.
-        #
-        # @param code [Integer] character code.
-        # @return [Integer] glyph ID.
-        def [](code)
-          @code_map[code] || 0
-        end
-
-        # Is this encoding record format supported?
-        #
-        # @return [true]
-        def supported?
-          true
-        end
-
         private
 
         def parse_cmap!
           length, @language, segcount_x2 = read(6, 'nnn')
           segcount = segcount_x2 / 2
 
-          io.read(6) # skip searching hints
+          io.pos += 6 # skip searching hints
 
           end_code = read(segcount_x2, 'n*')
-          io.read(2) # skip reserved value
+          io.pos += 2 # skip reserved value
           start_code = read(segcount_x2, 'n*')
           id_delta = read_signed(segcount)
           id_range_offset = read(segcount_x2, 'n*')

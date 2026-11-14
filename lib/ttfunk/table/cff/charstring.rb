@@ -58,25 +58,6 @@ module TTFunk
           @top_dict = top_dict
           @font_dict = font_dict
           @raw = raw
-
-          default_width_x = (@font_dict || @top_dict).private_dict.default_width_x
-
-          @nominal_width_x = (@font_dict || @top_dict).private_dict.nominal_width_x
-
-          @subrs = (@font_dict || @top_dict).private_dict.subr_index
-          @gsubrs = @top_dict.cff.global_subr_index
-          @subrs_bias = @subrs.bias if @subrs
-          @gsubrs_bias = @gsubrs.bias if @gsubrs
-
-          @stack = []
-          @data = raw.bytes
-          @index = 0
-          @n_stems = 0
-          @have_width = false
-          @open = false
-          @width = default_width_x
-          @x = 0
-          @y = 0
         end
 
         # Get path representation of this charstring.
@@ -119,46 +100,119 @@ module TTFunk
         private
 
         def parse!
-          until @index >= @data.size
-            code = @data[@index]
-            @index += 1
+          private_dict = (@font_dict || @top_dict).private_dict
+          @nominal_width_x = private_dict.nominal_width_x
+          @subrs = private_dict.subr_index
+          @gsubrs = @top_dict.cff.global_subr_index
+          @subrs_bias = @subrs.bias if @subrs
+          @gsubrs_bias = @gsubrs.bias if @gsubrs
 
-            # return from callgsubr - do nothing since we inline subrs
-            next if code == 11
+          @stack = []
+          @n_stems = 0
+          @have_width = false
+          @open = false
+          @width = private_dict.default_width_x
+          @x = 0
+          @y = 0
 
-            if code.between?(32, 246)
+          execute(@raw)
+        end
+
+        def execute(data, depth = 0)
+          raise SystemStackError, 'CFF subroutine nesting too deep' if depth > 64
+
+          idx = 0
+          len = data.bytesize
+
+          while idx < len
+            code = data.getbyte(idx)
+            idx += 1
+
+            if code < 32
+              if code == 11
+                return if depth.positive?
+
+                next
+              end
+
+              if code == 28
+                b1 = data.getbyte(idx)
+                b2 = data.getbyte(idx + 1)
+                idx += 2
+                @stack << (((b1 << 24) | (b2 << 16)) >> 16)
+              else
+                idx = dispatch_operator(code, data, idx, depth)
+              end
+            elsif code <= 246
               @stack << (code - 139)
-            elsif (m = CODE_MAP[code])
-              __send__(m)
-            elsif code.between?(247, 250)
-              b0 = code
-              b1 = @data[@index]
-              @index += 1
-              @stack << (((b0 - 247) * 256) + b1 + 108)
-            elsif code.between?(251, 254)
-              b0 = code
-              b1 = @data[@index]
-              @index += 1
-              @stack << ((-(b0 - 251) * 256) - b1 - 108)
+            elsif code <= 250
+              b1 = data.getbyte(idx)
+              idx += 1
+              @stack << (((code - 247) * 256) + b1 + 108)
+            elsif code <= 254
+              b1 = data.getbyte(idx)
+              idx += 1
+              @stack << ((-(code - 251) * 256) - b1 - 108)
             else
-              b1, b2, b3, b4 = read_bytes(4)
+              b1 = data.getbyte(idx)
+              b2 = data.getbyte(idx + 1)
+              b3 = data.getbyte(idx + 2)
+              b4 = data.getbyte(idx + 3)
+              idx += 4
               @stack << (((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) / 65_536)
             end
           end
         end
 
-        def read_bytes(length)
-          bytes = @data[@index, length]
-          @index += length
-          bytes
+        def dispatch_operator(code, data, idx, depth)
+          case code
+          when 1, 3, 18, 23 then stem
+          when 4 then vmoveto
+          when 5 then rlineto
+          when 6 then hlineto
+          when 7 then vlineto
+          when 8 then rrcurveto
+          when 10 then execute(@subrs[@stack.pop + @subrs_bias], depth + 1)
+          when 12
+            flex_code = data.getbyte(idx)
+            idx += 1
+            dispatch_flex(flex_code)
+          when 14 then endchar
+          when 19, 20
+            stem
+            # skip past hinting data, no need to worry about it since we're not
+            # very concerned about rendering glyphs
+            idx += (@n_stems + 7) >> 3
+          when 21 then rmoveto
+          when 22 then hmoveto
+          when 24 then rcurveline
+          when 25 then rlinecurve
+          when 26 then vvcurveto
+          when 27 then hhcurveto
+          when 29 then execute(@gsubrs[@stack.pop + @gsubrs_bias], depth + 1)
+          when 30 then vhcurveto
+          when 31 then hvcurveto
+          else
+            # Match legacy fallback for reserved 1-byte opcodes (< 32): consume 4 bytes as 16.16 fixed
+            b1 = data.getbyte(idx)
+            b2 = data.getbyte(idx + 1)
+            b3 = data.getbyte(idx + 2)
+            b4 = data.getbyte(idx + 3)
+            idx += 4
+            @stack << (((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) / 65_536)
+          end
+
+          idx
         end
 
-        def hstem
-          stem
-        end
-
-        def vstem
-          stem
+        def dispatch_flex(flex_code)
+          case flex_code
+          when 34 then hflex
+          when 35 then flex
+          when 36 then hflex1
+          when 37 then flex1
+          else __send__(nil)
+          end
         end
 
         # rubocop:disable Style/EvenOdd
@@ -258,18 +312,6 @@ module TTFunk
           @stack.clear
         end
 
-        def callsubr
-          code_index = @stack.pop + @subrs_bias
-          subr_code = @subrs[code_index].bytes
-          @data[@index, 0] = subr_code
-        end
-
-        def flex_select
-          flex_code = @data[@index]
-          @index += 1
-          __send__(FLEX_CODE_MAP[flex_code])
-        end
-
         def flex
           c1x = @x + @stack.shift # dx1
           c1y = @y + @stack.shift # dy1
@@ -357,22 +399,6 @@ module TTFunk
           end
         end
 
-        def hstemhm
-          stem
-        end
-
-        def hintmask
-          cntrmask
-        end
-
-        def cntrmask
-          stem
-
-          # skip past hinting data, no need to worry about it since we're not
-          # very concerned about rendering glyphs
-          read_bytes((@n_stems + 7) >> 3)
-        end
-
         def rmoveto
           if @stack.size > 2 && !@have_width
             @width = @stack.shift + @nominal_width_x
@@ -392,10 +418,6 @@ module TTFunk
 
           @x += @stack.pop
           add_contour(@x, @y)
-        end
-
-        def vstemhm
-          stem
         end
 
         def rcurveline
@@ -464,17 +486,6 @@ module TTFunk
           end
         end
         # rubocop:enable Style/EvenOdd
-
-        def shortint
-          b1, b2 = read_bytes(2)
-          @stack << (((b1 << 24) | (b2 << 16)) >> 16)
-        end
-
-        def callgsubr
-          code_index = @stack.pop + @gsubrs_bias
-          subr_code = @gsubrs[code_index].bytes
-          @data[@index, 0] = subr_code
-        end
 
         def vhcurveto
           until @stack.empty?

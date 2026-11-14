@@ -37,7 +37,9 @@ module TTFunk
 
         # Point indices for the last point of each contour.
         # @return [Array<Integer>]
-        attr_reader :end_points_of_contours
+        def end_points_of_contours
+          @end_points_of_contours ||= raw.byteslice(10, number_of_contours * 2).unpack('n*')
+        end
 
         # Total number of bytes for instructions.
         # @return [Integer]
@@ -45,7 +47,9 @@ module TTFunk
 
         # Instruction byte code.
         # @return [Array<Integer>]
-        attr_reader :instructions
+        def instructions
+          @instructions ||= raw.byteslice(@instructions_offset + 2, instruction_length).bytes
+        end
 
         # @param id [Integer] glyph ID.
         # @param raw [String]
@@ -55,17 +59,14 @@ module TTFunk
 
           @number_of_contours, @x_min, @y_min, @x_max, @y_max = raw.unpack('s>5')
 
-          endpoints_len = number_of_contours * 2
-          @end_points_of_contours = raw.byteslice(10, endpoints_len).unpack('n*')
-          offset = 10 + endpoints_len
+          @instructions_offset = 10 + (number_of_contours * 2)
           @instruction_length =
-            if offset + 2 <= raw.bytesize
-              raw.unpack1('n', offset: offset)
+            if @instructions_offset + 2 <= raw.bytesize
+              raw.unpack1('n', offset: @instructions_offset)
             else
               # Data too short for the field keeps the historical result.
-              raw.byteslice(offset, 2).unpack1('n')
+              raw.byteslice(@instructions_offset, 2).unpack1('n')
             end
-          @instructions = raw.byteslice(offset + 2, instruction_length).bytes
         end
 
         # Is this glyph compound?
@@ -85,6 +86,12 @@ module TTFunk
         # End point index of last contour.
         # @return [Integer]
         def end_point_of_last_contour
+          if @end_points_of_contours.nil? &&
+              number_of_contours.positive? &&
+              @instructions_offset + 2 <= raw.bytesize
+            return raw.unpack1('n', offset: @instructions_offset - 2) + 1
+          end
+
           end_points_of_contours.last + 1
         end
       end

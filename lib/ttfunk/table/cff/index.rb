@@ -156,26 +156,18 @@ module TTFunk
         # @return [String]
         def encode_offsets(offsets, offset_size, shift = 0)
           if offset_size == 3
-            # Offsets are packed as a C/n pair, which needs a flat argument
-            # array. Building it in place avoids an intermediate shifted array
-            # and flat_map's per-item arrays.
-            packed = Array.new(offsets.length * 2)
-            i = 0
+            buf = String.new(capacity: offsets.length * 3, encoding: ::Encoding::BINARY)
             if shift.zero?
               offsets.each do |offset|
-                packed[i] = offset >> 16
-                packed[i + 1] = offset & 0xffff
-                i += 2
+                buf << ((offset >> 16) & 0xFF) << ((offset >> 8) & 0xFF) << (offset & 0xFF)
               end
             else
               offsets.each do |offset|
                 offset += shift
-                packed[i] = offset >> 16
-                packed[i + 1] = offset & 0xffff
-                i += 2
+                buf << ((offset >> 16) & 0xFF) << ((offset >> 8) & 0xFF) << (offset & 0xFF)
               end
             end
-            packed.pack('Cn' * offsets.length)
+            buf
           else
             offsets = offsets.map { |offset| offset + shift } if shift.nonzero?
 

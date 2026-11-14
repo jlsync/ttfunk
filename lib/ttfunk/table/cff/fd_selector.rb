@@ -93,31 +93,43 @@ module TTFunk
         # @return [String]
         def encode(charmap)
           # get list of [new_gid, fd_index] pairs
-          new_indices =
-            charmap
-              .reject { |code, mapping| mapping[:new].zero? && !code.zero? }
-              .sort_by { |_code, mapping| mapping[:new] }
-              .map { |(_code, mapping)| [mapping[:new], self[mapping[:old]]] }
+          new_indices = []
+          charmap.each do |code, mapping|
+            new_gid = mapping[:new]
+            next if new_gid.zero? && !code.zero?
+
+            new_indices << [new_gid, self[mapping[:old]]]
+          end
+          new_indices.sort_by!(&:first)
 
           ranges = rangify_gids(new_indices)
-          total_range_size = ranges.size * RANGE_ENTRY_SIZE
+          range_count = ranges.length >> 1
+          total_range_size = range_count * RANGE_ENTRY_SIZE
           total_array_size = new_indices.size * ARRAY_ENTRY_SIZE
 
-          ''.b.tap do |result|
-            if total_array_size <= total_range_size
-              result << [ARRAY_FORMAT].pack('C')
-              result << new_indices.map(&:last).pack('C*')
-            else
-              result << [RANGE_FORMAT, ranges.size].pack('Cn')
-              result << ranges.flatten.pack('nC' * ranges.size)
-
-              # "A sentinel GID follows the last range element and serves to
-              # delimit the last range in the array. (The sentinel GID is set
-              # equal to the number of glyphs in the font. That is, its value
-              # is 1 greater than the last GID in the font)."
-              result << [new_indices.size].pack('n')
+          if total_array_size <= total_range_size
+            result = String.new(capacity: 1 + total_array_size, encoding: ::Encoding::BINARY)
+            result << ARRAY_FORMAT
+            new_indices.each { |entry| result << entry[1] }
+          else
+            result = String.new(capacity: 3 + total_range_size + 2, encoding: ::Encoding::BINARY)
+            result << RANGE_FORMAT << ((range_count >> 8) & 0xFF) << (range_count & 0xFF)
+            i = 0
+            while i < ranges.length
+              gid = ranges[i]
+              result << ((gid >> 8) & 0xFF) << (gid & 0xFF) << ranges[i + 1]
+              i += 2
             end
+
+            # "A sentinel GID follows the last range element and serves to
+            # delimit the last range in the array. (The sentinel GID is set
+            # equal to the number of glyphs in the font. That is, its value
+            # is 1 greater than the last GID in the font)."
+            sentinel = new_indices.size
+            result << ((sentinel >> 8) & 0xFF) << (sentinel & 0xFF)
           end
+
+          result
         end
 
         private
@@ -129,17 +141,21 @@ module TTFunk
         # values is an array of [new_gid, fd_index] pairs
         def rangify_gids(values)
           start_gid = 0
+          ranges = []
+          i = 0
+          limit = values.length - 1
 
-          [].tap do |ranges|
-            values.each_cons(2) do |(_, first_idx), (sec_gid, sec_idx)|
-              if first_idx != sec_idx
-                ranges << [start_gid, first_idx]
-                start_gid = sec_gid
-              end
+          while i < limit
+            first_idx = values[i][1]
+            sec_gid, sec_idx = values[i + 1]
+            if first_idx != sec_idx
+              ranges << start_gid << first_idx
+              start_gid = sec_gid
             end
-
-            ranges << [start_gid, values.last[1]]
+            i += 1
           end
+
+          ranges << start_gid << values.last[1]
         end
 
         def parse!

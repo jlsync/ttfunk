@@ -625,7 +625,8 @@ module TTFunk
             raise SPACE_GLYPH_MISSING_ERROR
           end
 
-          space_gid = os2.file.cmap.unicode.first[CODEPOINT_SPACE]
+          unicode_cmap = os2.file.cmap.unicode.first
+          space_gid = unicode_cmap[CODEPOINT_SPACE]
           space_hm = os2.file.horizontal_metrics.for(space_gid)
           return 0 unless space_hm
 
@@ -638,7 +639,7 @@ module TTFunk
             # make sure the subset includes the character
             next unless unicode_map[lowercase_cp]
 
-            lowercase_gid = os2.file.cmap.unicode.first[lowercase_cp]
+            lowercase_gid = unicode_cmap[lowercase_cp]
             lowercase_hm = os2.file.horizontal_metrics.for(lowercase_gid)
 
             num_lowercase += 1

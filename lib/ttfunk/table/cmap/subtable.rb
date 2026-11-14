@@ -87,6 +87,7 @@ module TTFunk
           @file = file
           @platform_id, @encoding_id, @offset = io.read(8).unpack('nnN')
           @offset += table_start
+          @parsed = false
 
           parse_from(@offset) do
             @format = io.read(2).unpack1('n')
@@ -98,8 +99,6 @@ module TTFunk
             when 10 then extend(TTFunk::Table::Cmap::Format10)
             when 12 then extend(TTFunk::Table::Cmap::Format12)
             end
-
-            parse_cmap!
           end
         end
 
@@ -128,8 +127,48 @@ module TTFunk
 
         private
 
+        def ensure_parsed!
+          return if @parsed
+
+          parse_from(@offset + 2) { parse_cmap! }
+          @parsed = true
+        end
+
         def parse_cmap!
           # do nothing...
+        end
+      end
+
+      # Shared lazy-parsing accessors for supported cmap subtable formats.
+      module SupportedFormat
+        # Language.
+        # @return [Integer]
+        def language
+          ensure_parsed!
+          @language
+        end
+
+        # Code map.
+        # @return [Hash{Integer => Integer}, Array<Integer>]
+        def code_map
+          ensure_parsed!
+          @code_map
+        end
+
+        # Get glyph ID for character code.
+        #
+        # @param code [Integer] character code.
+        # @return [Integer] glyph ID.
+        def [](code)
+          ensure_parsed!
+          @code_map[code] || 0
+        end
+
+        # Is this encoding record format supported?
+        #
+        # @return [true]
+        def supported?
+          true
         end
       end
     end

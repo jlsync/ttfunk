@@ -184,7 +184,7 @@ module TTFunk
             when OPERATOR_BZERO
               @dict[b_zero] = operands unless operands.empty?
               operands = []
-            when *OPERAND_BZERO
+            when 28..30, 32..254
               operands << decode_operand(b_zero)
 
               if operands.size > MAX_OPERANDS
@@ -221,21 +221,8 @@ module TTFunk
             high_nibble = current >> 4
             low_nibble = current & 0x0F # 0b00001111
 
-            [high_nibble, low_nibble].each do |nibble|
-              case nibble
-              when 0..9
-                (exponent.empty? ? significand : exponent) << nibble.to_s
-              when 0xA
-                significand << '.'
-              when 0xB
-                # take advantage of Integer#to_i not caring about whitespace
-                exponent << ' '
-              when 0xC
-                exponent << '-'
-              when 0xE
-                significand << '-'
-              end
-            end
+            append_sci_nibble(high_nibble, significand, exponent)
+            append_sci_nibble(low_nibble, significand, exponent)
 
             break if low_nibble == 0xF
           end
@@ -245,6 +232,22 @@ module TTFunk
           exponent = 0 if exponent.empty?
 
           SciForm.new(Float(significand), Integer(exponent))
+        end
+
+        def append_sci_nibble(nibble, significand, exponent)
+          case nibble
+          when 0..9
+            (exponent.empty? ? significand : exponent) << nibble.to_s
+          when 0xA
+            significand << '.'
+          when 0xB
+            # take advantage of Integer#to_i not caring about whitespace
+            exponent << ' '
+          when 0xC
+            exponent << '-'
+          when 0xE
+            significand << '-'
+          end
         end
 
         def validate_sci!(significand, exponent)

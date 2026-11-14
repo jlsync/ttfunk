@@ -34,7 +34,7 @@ module TTFunk
             each do |operator, operands|
               case OPERATOR_CODES[operator]
               when :subrs
-                result << encode_subrs
+                result << Placeholder.new(:"subrs_#{@table_offset}", length: PLACEHOLDER_LENGTH)
               else
                 operands.each { |operand| result << encode_operand(operand) }
               end
@@ -88,14 +88,6 @@ module TTFunk
             width.first
           else
             DEFAULT_WIDTH_X_NOMINAL
-          end
-        end
-
-        private
-
-        def encode_subrs
-          EncodedString.new do |result|
-            result << Placeholder.new(:"subrs_#{@table_offset}", length: PLACEHOLDER_LENGTH)
           end
         end
       end

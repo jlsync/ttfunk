@@ -114,7 +114,7 @@ module TTFunk
     end
 
     def hhea_table
-      @hhea_table = TTFunk::Table::Hhea.encode(original.horizontal_header, hmtx_table, original, new_to_old_glyph)
+      @hhea_table ||= TTFunk::Table::Hhea.encode(original.horizontal_header, hmtx_table, original, new_to_old_glyph)
     end
 
     def maxp_table

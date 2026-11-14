@@ -20,6 +20,16 @@ module TTFunk
   #
   # @api private
   class EncodedString
+    ZERO_PADDING = [
+      ''.b,
+      "\0".b,
+      "\0\0".b,
+      "\0\0\0".b,
+      "\0\0\0\0".b,
+      "\0\0\0\0\0".b,
+    ].freeze
+    private_constant :ZERO_PADDING
+
     # @yieldparam [self]
     def initialize
       @string = +''.b
@@ -36,11 +46,14 @@ module TTFunk
         @string << obj
       when Placeholder
         add_placeholder(obj)
-        @string << ("\0" * obj.length)
+        @string << zero_padding(obj.length)
       when self.class
         # adjust placeholders to be relative to the entire encoded string
-        obj.placeholders.each_pair do |_, placeholder|
-          add_placeholder(placeholder.dup, placeholder.position + @string.bytesize)
+        if obj.placeholders?
+          base = @string.bytesize
+          obj.placeholders.each_pair do |_, placeholder|
+            add_placeholder(placeholder.dup, placeholder.position + base)
+          end
         end
 
         @string << obj.unresolved_string
@@ -66,7 +79,7 @@ module TTFunk
     # @return [self]
     def align!(width = 4)
       rem = length % width
-      self << ("\0" * (width - rem)) if rem.positive?
+      @string << zero_padding(width - rem) if rem.positive?
 
       self
     end
@@ -84,7 +97,7 @@ module TTFunk
     # @raise [UnresolvedPlaceholderError] if there are any unresolved
     #   placeholders left.
     def string
-      unless placeholders.empty?
+      if placeholders?
         raise UnresolvedPlaceholderError,
           "string contains #{placeholders.size} unresolved placeholder(s)"
       end
@@ -114,14 +127,14 @@ module TTFunk
     # @param value [String]
     # @return [void]
     def resolve_placeholder(name, value)
-      return unless (placeholder = placeholders[name])
+      return unless placeholders? && (placeholder = @placeholders[name])
 
       if value.bytesize > placeholder.length
         value = value.byteslice(0, placeholder.length)
       end
 
       @string[placeholder.position, value.bytesize] = value
-      placeholders.delete(name)
+      @placeholders.delete(name)
     end
 
     # Plaholders
@@ -131,7 +144,18 @@ module TTFunk
       @placeholders ||= {}
     end
 
+    # Whether any unresolved placeholders are present.
+    #
+    # @return [Boolean]
+    def placeholders?
+      !@placeholders.nil? && !@placeholders.empty?
+    end
+
     private
+
+    def zero_padding(len)
+      (len >= 0 && ZERO_PADDING[len]) || ("\0".b * len)
+    end
 
     def add_placeholder(new_placeholder, pos = @string.bytesize)
       if placeholders.include?(new_placeholder.name)

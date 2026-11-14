@@ -36,8 +36,7 @@ module TTFunk
       # @param character [Integer] Unicode codepoint
       # @return [void]
       def use(character)
-        reset_cache!
-        @subset << character
+        reset_cache! if @subset.add?(character)
       end
 
       # Can this subset include the character?

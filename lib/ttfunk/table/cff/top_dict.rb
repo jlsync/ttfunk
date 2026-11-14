@@ -42,7 +42,7 @@ module TTFunk
           EncodedString.new do |result|
             each_with_index do |(operator, operands), _idx|
               if operator == OPERATORS[:private]
-                result << encode_private
+                append_private_placeholders(result)
               elsif pointer_operator?(operator)
                 result << Placeholder.new(
                   OPERATOR_CODES[operator],
@@ -217,18 +217,16 @@ module TTFunk
 
         private
 
-        def encode_private
-          EncodedString.new do |result|
-            result << Placeholder.new(
-              :"private_length_#{@table_offset}",
-              length: PLACEHOLDER_LENGTH,
-            )
+        def append_private_placeholders(result)
+          result << Placeholder.new(
+            :"private_length_#{@table_offset}",
+            length: PLACEHOLDER_LENGTH,
+          )
 
-            result << Placeholder.new(
-              :"private_offset_#{@table_offset}",
-              length: PLACEHOLDER_LENGTH,
-            )
-          end
+          result << Placeholder.new(
+            :"private_offset_#{@table_offset}",
+            length: PLACEHOLDER_LENGTH,
+          )
         end
 
         def finalize_subtable(new_cff_data, name, table_data)
